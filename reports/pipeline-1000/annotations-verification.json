@@ -1,0 +1,39 @@
+{
+  "verified": true,
+  "image_counts_by_partition": {
+    "train": 569,
+    "missing": 45,
+    "validation": 197,
+    "test": 188,
+    "bench_holdout": 1
+  },
+  "missing_by_image_split": {
+    "train": 31,
+    "test": 11,
+    "validation": 3
+  },
+  "metadata_columns": [
+    "patch_id",
+    "labels",
+    "split",
+    "country",
+    "s1_name",
+    "s2v1_name",
+    "contains_seasonal_snow",
+    "contains_cloud_or_shadow"
+  ],
+  "missing_quality_flags": {
+    "contains_seasonal_snow": {
+      "False": 45
+    },
+    "contains_cloud_or_shadow": {
+      "False": 45
+    }
+  },
+  "output_files_sha256": {
+    "annotations.parquet": "8432fcaa9092d97509e9cd7fc09400245a1b3b19317dd860d497061cee0ccf89",
+    "image-annotations.jsonl": "e9a3b9005a02866275ef4014538aa8db338ace69ff28f01ef56acca9bedd7580",
+    "feature-links.jsonl": "ed433151f838bf2338a6a2fe6ae0e66f5d19ef82374da13833d0c5f8e21577e1",
+    "report.json": "d5613d0316ff8a5491cc3a9e4e34b0a0bb181d65bb5315d45c586591b8b31d49"
+  }
+}

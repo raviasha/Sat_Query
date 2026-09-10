@@ -1,0 +1,693 @@
+{
+  "format_version": 1,
+  "checkpoint_sha256": "b86fb9f2800b4547267144ebffe4221feffcfad436b184d4285b7f1fc669c6e3",
+  "feature_contract": {
+    "checkpoint_sha256": "0238d814b53108f3574bf1ea240e38a0a6edd46173816d9a6962070561893b63",
+    "croma_source_revision": "59505a6bcadbf36ba20767270154bf9f3067c5e7",
+    "inference_implementation_sha256": "af8f432a0d1807d4893ef331763a19cddbaac0342e0cb40cfc0ff600f8c9541d",
+    "channel_profile": {
+      "optical": [
+        "B01",
+        "B02",
+        "B03",
+        "B04",
+        "B05",
+        "B06",
+        "B07",
+        "B08",
+        "B8A",
+        "B09",
+        "B11",
+        "B12"
+      ],
+      "sar": [
+        "VV",
+        "VH"
+      ],
+      "evidence": "https://github.com/zhu-xlab/SSL4EO-S12/blob/2156913c5d8e5a2c572a5b000f0d5eaed6fc3192/src/benchmark/pretrain_ssl/datasets/SSL4EO/ssl4eo_dataset.py",
+      "evidence_level": "source_dataset_verified_croma_order_inferred"
+    },
+    "normalization_profile": "croma_readme_patch_8bit_v1"
+  },
+  "classes": [
+    {
+      "index": 0,
+      "name": "Urban fabric",
+      "clc_codes": [
+        111,
+        112
+      ]
+    },
+    {
+      "index": 1,
+      "name": "Industrial or commercial units",
+      "clc_codes": [
+        121
+      ]
+    },
+    {
+      "index": 2,
+      "name": "Arable land",
+      "clc_codes": [
+        211,
+        212,
+        213
+      ]
+    },
+    {
+      "index": 3,
+      "name": "Permanent crops",
+      "clc_codes": [
+        221,
+        222,
+        223,
+        241
+      ]
+    },
+    {
+      "index": 4,
+      "name": "Pastures",
+      "clc_codes": [
+        231
+      ]
+    },
+    {
+      "index": 5,
+      "name": "Complex cultivation patterns",
+      "clc_codes": [
+        242
+      ]
+    },
+    {
+      "index": 6,
+      "name": "Land principally occupied by agriculture, with significant areas of natural vegetation",
+      "clc_codes": [
+        243
+      ]
+    },
+    {
+      "index": 7,
+      "name": "Agro-forestry areas",
+      "clc_codes": [
+        244
+      ]
+    },
+    {
+      "index": 8,
+      "name": "Broad-leaved forest",
+      "clc_codes": [
+        311
+      ]
+    },
+    {
+      "index": 9,
+      "name": "Coniferous forest",
+      "clc_codes": [
+        312
+      ]
+    },
+    {
+      "index": 10,
+      "name": "Mixed forest",
+      "clc_codes": [
+        313
+      ]
+    },
+    {
+      "index": 11,
+      "name": "Natural grassland and sparsely vegetated areas",
+      "clc_codes": [
+        321,
+        333
+      ]
+    },
+    {
+      "index": 12,
+      "name": "Moors, heathland and sclerophyllous vegetation",
+      "clc_codes": [
+        322,
+        323
+      ]
+    },
+    {
+      "index": 13,
+      "name": "Transitional woodland, shrub",
+      "clc_codes": [
+        324
+      ]
+    },
+    {
+      "index": 14,
+      "name": "Beaches, dunes, sands",
+      "clc_codes": [
+        331
+      ]
+    },
+    {
+      "index": 15,
+      "name": "Inland wetlands",
+      "clc_codes": [
+        411,
+        412
+      ]
+    },
+    {
+      "index": 16,
+      "name": "Coastal wetlands",
+      "clc_codes": [
+        421,
+        422
+      ]
+    },
+    {
+      "index": 17,
+      "name": "Inland waters",
+      "clc_codes": [
+        511,
+        512
+      ]
+    },
+    {
+      "index": 18,
+      "name": "Marine waters",
+      "clc_codes": [
+        521,
+        522,
+        523
+      ]
+    }
+  ],
+  "evaluation_scope": "held_out_test_areas",
+  "prediction_confidence_available": false,
+  "test_report_sha256": "5ea2b3f79dec69055d2da056a6b2a10fc9362936e8039236b08abdd09822c4a7",
+  "class_metrics": [
+    {
+      "index": 0,
+      "name": "Urban fabric",
+      "clc_codes": [
+        111,
+        112
+      ],
+      "mae_pp": 3.893743125205914,
+      "rmse_pp": 11.96264202359508,
+      "bias_pp": -0.03688669226355165,
+      "present_mae_pp": 33.6630115512605,
+      "present_tokens": 2750,
+      "present_areas": 55,
+      "mean_true_coverage_percent": 4.83381733112716,
+      "within_5pp_fraction": 0.8635154171231805,
+      "present_within_5pp_fraction": 0.10363636363636364,
+      "dominant_precision": 0.7405931828242586,
+      "dominant_recall": 0.7734627831715211,
+      "dominant_f1": 0.7566711895070104,
+      "dominant_true_tokens": 2163,
+      "dominant_predicted_tokens": 2259,
+      "mae_pp_area_bootstrap_95ci": [
+        3.0455768029000088,
+        4.741101500115391
+      ],
+      "support_status": "at_least_20_test_areas"
+    },
+    {
+      "index": 1,
+      "name": "Industrial or commercial units",
+      "clc_codes": [
+        121
+      ],
+      "mae_pp": 1.6697864829537112,
+      "rmse_pp": 7.587022410091362,
+      "bias_pp": 0.33045297462775036,
+      "present_mae_pp": 57.95465887431802,
+      "present_tokens": 522,
+      "present_areas": 13,
+      "mean_true_coverage_percent": 0.871335778011314,
+      "within_5pp_fraction": 0.9512107863962614,
+      "present_within_5pp_fraction": 0.04789272030651341,
+      "dominant_precision": 0.6,
+      "dominant_recall": 0.20580474934036938,
+      "dominant_f1": 0.30648330058939094,
+      "dominant_true_tokens": 379,
+      "dominant_predicted_tokens": 130,
+      "mae_pp_area_bootstrap_95ci": [
+        1.1455436396481589,
+        2.2420707636463137
+      ],
+      "support_status": "limited_test_presence"
+    },
+    {
+      "index": 2,
+      "name": "Arable land",
+      "clc_codes": [
+        211,
+        212,
+        213
+      ],
+      "mae_pp": 16.16761917070473,
+      "rmse_pp": 28.99803250391461,
+      "bias_pp": -3.4739512248616586,
+      "present_mae_pp": 44.7884435461453,
+      "present_tokens": 10222,
+      "present_areas": 103,
+      "mean_true_coverage_percent": 19.36066872750039,
+      "within_5pp_fraction": 0.5290566375243163,
+      "present_within_5pp_fraction": 0.06084914889454118,
+      "dominant_precision": 0.6436959893640594,
+      "dominant_recall": 0.6716763005780347,
+      "dominant_f1": 0.6573885494455759,
+      "dominant_true_tokens": 8650,
+      "dominant_predicted_tokens": 9026,
+      "mae_pp_area_bootstrap_95ci": [
+        14.134734973717038,
+        18.395011360621854
+      ],
+      "support_status": "at_least_20_test_areas"
+    },
+    {
+      "index": 3,
+      "name": "Permanent crops",
+      "clc_codes": [
+        221,
+        222,
+        223,
+        241
+      ],
+      "mae_pp": 2.092504174306058,
+      "rmse_pp": 8.48613426159515,
+      "bias_pp": 0.7527230187022187,
+      "present_mae_pp": 76.84273169726694,
+      "present_tokens": 390,
+      "present_areas": 4,
+      "mean_true_coverage_percent": 0.6933652706661002,
+      "within_5pp_fraction": 0.934172573396239,
+      "present_within_5pp_fraction": 0.04358974358974359,
+      "dominant_precision": 0.008695652173913044,
+      "dominant_recall": 0.0032679738562091504,
+      "dominant_f1": 0.004750593824228029,
+      "dominant_true_tokens": 306,
+      "dominant_predicted_tokens": 115,
+      "mae_pp_area_bootstrap_95ci": [
+        1.425225440915426,
+        3.009468402291586
+      ],
+      "support_status": "limited_test_presence"
+    },
+    {
+      "index": 4,
+      "name": "Pastures",
+      "clc_codes": [
+        231
+      ],
+      "mae_pp": 12.966660323243216,
+      "rmse_pp": 25.06727416775147,
+      "bias_pp": -0.7384503016562796,
+      "present_mae_pp": 46.66505678106913,
+      "present_tokens": 6882,
+      "present_areas": 76,
+      "mean_true_coverage_percent": 12.758815374639449,
+      "within_5pp_fraction": 0.591530085191065,
+      "present_within_5pp_fraction": 0.045771578029642546,
+      "dominant_precision": 0.5543233927768619,
+      "dominant_recall": 0.6538801484885982,
+      "dominant_f1": 0.6,
+      "dominant_true_tokens": 5657,
+      "dominant_predicted_tokens": 6673,
+      "mae_pp_area_bootstrap_95ci": [
+        10.913072625828436,
+        14.866128963069698
+      ],
+      "support_status": "at_least_20_test_areas"
+    },
+    {
+      "index": 5,
+      "name": "Complex cultivation patterns",
+      "clc_codes": [
+        242
+      ],
+      "mae_pp": 11.694588728692727,
+      "rmse_pp": 22.09723086741545,
+      "bias_pp": 2.9185442327611226,
+      "present_mae_pp": 58.61191370321293,
+      "present_tokens": 3406,
+      "present_areas": 50,
+      "mean_true_coverage_percent": 5.830682758312278,
+      "within_5pp_fraction": 0.5349372805938779,
+      "present_within_5pp_fraction": 0.05637110980622431,
+      "dominant_precision": 0.24134312696747115,
+      "dominant_recall": 0.2663064453878811,
+      "dominant_f1": 0.25321100917431194,
+      "dominant_true_tokens": 2591,
+      "dominant_predicted_tokens": 2859,
+      "mae_pp_area_bootstrap_95ci": [
+        10.167072534895532,
+        13.377747057916407
+      ],
+      "support_status": "at_least_20_test_areas"
+    },
+    {
+      "index": 6,
+      "name": "Land principally occupied by agriculture, with significant areas of natural vegetation",
+      "clc_codes": [
+        243
+      ],
+      "mae_pp": 8.440515253700283,
+      "rmse_pp": 19.525121857063986,
+      "bias_pp": 0.0011643880863255209,
+      "present_mae_pp": 62.51069207204434,
+      "present_tokens": 3047,
+      "present_areas": 54,
+      "mean_true_coverage_percent": 5.055878686581848,
+      "within_5pp_fraction": 0.6451043087449411,
+      "present_within_5pp_fraction": 0.06432556613062028,
+      "dominant_precision": 0.3411513859275053,
+      "dominant_recall": 0.14247551202137132,
+      "dominant_f1": 0.20100502512562815,
+      "dominant_true_tokens": 2246,
+      "dominant_predicted_tokens": 938,
+      "mae_pp_area_bootstrap_95ci": [
+        7.106411979192774,
+        9.852636504954987
+      ],
+      "support_status": "at_least_20_test_areas"
+    },
+    {
+      "index": 7,
+      "name": "Agro-forestry areas",
+      "clc_codes": [
+        244
+      ],
+      "mae_pp": 2.4077274288237738,
+      "rmse_pp": 9.802768937598136,
+      "bias_pp": 0.43759261146626,
+      "present_mae_pp": 68.37116394937038,
+      "present_tokens": 650,
+      "present_areas": 7,
+      "mean_true_coverage_percent": 1.1775959796972475,
+      "within_5pp_fraction": 0.9187219104264025,
+      "present_within_5pp_fraction": 0.05076923076923077,
+      "dominant_precision": 0.3151041666666667,
+      "dominant_recall": 0.2300380228136882,
+      "dominant_f1": 0.26593406593406593,
+      "dominant_true_tokens": 526,
+      "dominant_predicted_tokens": 384,
+      "mae_pp_area_bootstrap_95ci": [
+        1.4933316700678023,
+        3.529581279505642
+      ],
+      "support_status": "limited_test_presence"
+    },
+    {
+      "index": 8,
+      "name": "Broad-leaved forest",
+      "clc_codes": [
+        311
+      ],
+      "mae_pp": 17.113383011548915,
+      "rmse_pp": 30.504245494875356,
+      "bias_pp": -3.3582367873693184,
+      "present_mae_pp": 47.18920348806084,
+      "present_tokens": 10162,
+      "present_areas": 96,
+      "mean_true_coverage_percent": 19.1312006685598,
+      "within_5pp_fraction": 0.5313373432014847,
+      "present_within_5pp_fraction": 0.06189726431804763,
+      "dominant_precision": 0.6002863751514484,
+      "dominant_recall": 0.638322792223003,
+      "dominant_f1": 0.6187205540103309,
+      "dominant_true_tokens": 8538,
+      "dominant_predicted_tokens": 9079,
+      "mae_pp_area_bootstrap_95ci": [
+        14.73589954644445,
+        19.40744565704713
+      ],
+      "support_status": "at_least_20_test_areas"
+    },
+    {
+      "index": 9,
+      "name": "Coniferous forest",
+      "clc_codes": [
+        312
+      ],
+      "mae_pp": 10.366579486382385,
+      "rmse_pp": 21.06589587917783,
+      "bias_pp": 4.413884286798514,
+      "present_mae_pp": 42.42855104542831,
+      "present_tokens": 3299,
+      "present_areas": 45,
+      "mean_true_coverage_percent": 6.024619602888894,
+      "within_5pp_fraction": 0.6362721642108088,
+      "present_within_5pp_fraction": 0.06062443164595332,
+      "dominant_precision": 0.338302963371986,
+      "dominant_recall": 0.685820895522388,
+      "dominant_f1": 0.45309996302230987,
+      "dominant_true_tokens": 2680,
+      "dominant_predicted_tokens": 5433,
+      "mae_pp_area_bootstrap_95ci": [
+        8.70134205903966,
+        12.108451856678737
+      ],
+      "support_status": "at_least_20_test_areas"
+    },
+    {
+      "index": 10,
+      "name": "Mixed forest",
+      "clc_codes": [
+        313
+      ],
+      "mae_pp": 14.435754868759348,
+      "rmse_pp": 28.315223949398696,
+      "bias_pp": -3.6115415542012856,
+      "present_mae_pp": 59.96480434606552,
+      "present_tokens": 6836,
+      "present_areas": 79,
+      "mean_true_coverage_percent": 12.415661404646379,
+      "within_5pp_fraction": 0.5826085012186123,
+      "present_within_5pp_fraction": 0.042276184903452314,
+      "dominant_precision": 0.494949494949495,
+      "dominant_recall": 0.30878646020885847,
+      "dominant_f1": 0.38030823816387627,
+      "dominant_true_tokens": 5554,
+      "dominant_predicted_tokens": 3465,
+      "mae_pp_area_bootstrap_95ci": [
+        12.215778805596784,
+        16.767534910532014
+      ],
+      "support_status": "at_least_20_test_areas"
+    },
+    {
+      "index": 11,
+      "name": "Natural grassland and sparsely vegetated areas",
+      "clc_codes": [
+        321,
+        333
+      ],
+      "mae_pp": 2.0422109263793784,
+      "rmse_pp": 7.9818168025394955,
+      "bias_pp": 0.8386226308692589,
+      "present_mae_pp": 69.91415235944878,
+      "present_tokens": 387,
+      "present_areas": 7,
+      "mean_true_coverage_percent": 0.6488202379089059,
+      "within_5pp_fraction": 0.9236410795340205,
+      "present_within_5pp_fraction": 0.056847545219638244,
+      "dominant_precision": 0.06707317073170732,
+      "dominant_recall": 0.038461538461538464,
+      "dominant_f1": 0.04888888888888889,
+      "dominant_true_tokens": 286,
+      "dominant_predicted_tokens": 164,
+      "mae_pp_area_bootstrap_95ci": [
+        1.5298055853021966,
+        2.671299968055245
+      ],
+      "support_status": "limited_test_presence"
+    },
+    {
+      "index": 12,
+      "name": "Moors, heathland and sclerophyllous vegetation",
+      "clc_codes": [
+        322,
+        323
+      ],
+      "mae_pp": 1.0932916211078048,
+      "rmse_pp": 6.50103441977003,
+      "bias_pp": 0.22911337074560326,
+      "present_mae_pp": 78.24786693829363,
+      "present_tokens": 247,
+      "present_areas": 4,
+      "mean_true_coverage_percent": 0.4352835789191244,
+      "within_5pp_fraction": 0.9813071573910516,
+      "present_within_5pp_fraction": 0.044534412955465584,
+      "dominant_precision": 0.0,
+      "dominant_recall": 0.0,
+      "dominant_f1": 0.0,
+      "dominant_true_tokens": 193,
+      "dominant_predicted_tokens": 26,
+      "mae_pp_area_bootstrap_95ci": [
+        0.6683925834024177,
+        1.7530572612026896
+      ],
+      "support_status": "limited_test_presence"
+    },
+    {
+      "index": 13,
+      "name": "Transitional woodland, shrub",
+      "clc_codes": [
+        324
+      ],
+      "mae_pp": 7.972117277802329,
+      "rmse_pp": 20.231822091637287,
+      "bias_pp": -1.0530470475952347,
+      "present_mae_pp": 62.24926320854357,
+      "present_tokens": 3279,
+      "present_areas": 61,
+      "mean_true_coverage_percent": 5.657568532969613,
+      "within_5pp_fraction": 0.744806922612526,
+      "present_within_5pp_fraction": 0.055809698078682524,
+      "dominant_precision": 0.4013840830449827,
+      "dominant_recall": 0.27862289831865494,
+      "dominant_f1": 0.32892249527410206,
+      "dominant_true_tokens": 2498,
+      "dominant_predicted_tokens": 1734,
+      "mae_pp_area_bootstrap_95ci": [
+        6.296263568284285,
+        9.818981121611582
+      ],
+      "support_status": "at_least_20_test_areas"
+    },
+    {
+      "index": 14,
+      "name": "Beaches, dunes, sands",
+      "clc_codes": [
+        331
+      ],
+      "mae_pp": 0.43080169431575793,
+      "rmse_pp": 0.7313451849448434,
+      "bias_pp": 0.430162645566729,
+      "present_mae_pp": 4.763362867136796,
+      "present_tokens": 3,
+      "present_areas": 1,
+      "mean_true_coverage_percent": 0.0004192473671265344,
+      "within_5pp_fraction": 0.9977640140419918,
+      "present_within_5pp_fraction": 0.6666666666666666,
+      "dominant_precision": null,
+      "dominant_recall": null,
+      "dominant_f1": null,
+      "dominant_true_tokens": 0,
+      "dominant_predicted_tokens": 0,
+      "mae_pp_area_bootstrap_95ci": [
+        0.38953681062510565,
+        0.4741610078633296
+      ],
+      "support_status": "limited_test_presence"
+    },
+    {
+      "index": 15,
+      "name": "Inland wetlands",
+      "clc_codes": [
+        411,
+        412
+      ],
+      "mae_pp": 1.2469108184504936,
+      "rmse_pp": 4.215296661344857,
+      "bias_pp": 1.125052569281468,
+      "present_mae_pp": 60.672532396597994,
+      "present_tokens": 45,
+      "present_areas": 2,
+      "mean_true_coverage_percent": 0.0647387809404557,
+      "within_5pp_fraction": 0.9545424054736936,
+      "present_within_5pp_fraction": 0.1111111111111111,
+      "dominant_precision": 0.0,
+      "dominant_recall": 0.0,
+      "dominant_f1": 0.0,
+      "dominant_true_tokens": 28,
+      "dominant_predicted_tokens": 138,
+      "mae_pp_area_bootstrap_95ci": [
+        0.994604139788046,
+        1.554738313035094
+      ],
+      "support_status": "limited_test_presence"
+    },
+    {
+      "index": 16,
+      "name": "Coastal wetlands",
+      "clc_codes": [
+        421,
+        422
+      ],
+      "mae_pp": 0.42921588658839166,
+      "rmse_pp": 0.7470063382726264,
+      "bias_pp": 0.42921588658839166,
+      "present_mae_pp": null,
+      "present_tokens": 0,
+      "present_areas": 0,
+      "mean_true_coverage_percent": 0.0,
+      "within_5pp_fraction": 0.9973168168503902,
+      "present_within_5pp_fraction": null,
+      "dominant_precision": 0.0,
+      "dominant_recall": null,
+      "dominant_f1": 0.0,
+      "dominant_true_tokens": 0,
+      "dominant_predicted_tokens": 1,
+      "mae_pp_area_bootstrap_95ci": [
+        0.38651962796760153,
+        0.47418309773786493
+      ],
+      "support_status": "no_test_presence"
+    },
+    {
+      "index": 17,
+      "name": "Inland waters",
+      "clc_codes": [
+        511,
+        512
+      ],
+      "mae_pp": 1.512167033955813,
+      "rmse_pp": 7.767098533568818,
+      "bias_pp": -0.2919088078196114,
+      "present_mae_pp": 34.05488897590048,
+      "present_tokens": 1202,
+      "present_areas": 21,
+      "mean_true_coverage_percent": 2.1086745075240927,
+      "within_5pp_fraction": 0.9621223978713414,
+      "present_within_5pp_fraction": 0.19550748752079866,
+      "dominant_precision": 0.9026162790697675,
+      "dominant_recall": 0.6585365853658537,
+      "dominant_f1": 0.7614960147148988,
+      "dominant_true_tokens": 943,
+      "dominant_predicted_tokens": 688,
+      "mae_pp_area_bootstrap_95ci": [
+        1.0594366344710906,
+        2.0518561912169013
+      ],
+      "support_status": "at_least_20_test_areas"
+    },
+    {
+      "index": 18,
+      "name": "Marine waters",
+      "clc_codes": [
+        521,
+        522,
+        523
+      ],
+      "mae_pp": 0.9743242349114223,
+      "rmse_pp": 4.306790640911016,
+      "bias_pp": 0.6574938458788742,
+      "present_mae_pp": 5.384919024602551,
+      "present_tokens": 1318,
+      "present_areas": 6,
+      "mean_true_coverage_percent": 2.9308535317398205,
+      "within_5pp_fraction": 0.964201864812289,
+      "present_within_5pp_fraction": 0.8512898330804249,
+      "dominant_precision": 0.8887343532684284,
+      "dominant_recall": 0.9740853658536586,
+      "dominant_f1": 0.9294545454545454,
+      "dominant_true_tokens": 1312,
+      "dominant_predicted_tokens": 1438,
+      "mae_pp_area_bootstrap_95ci": [
+        0.6221048603523247,
+        1.4129487507959755
+      ],
+      "support_status": "limited_test_presence"
+    }
+  ],
+  "note": "Show coverage prediction separately from historical test MAE, present-class MAE and area support. These are not calibrated probabilities or prediction intervals."
+}

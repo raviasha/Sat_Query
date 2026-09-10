@@ -1,0 +1,8 @@
+{
+  "upstream_url": "https://raw.githubusercontent.com/antofuller/CROMA/59505a6bcadbf36ba20767270154bf9f3067c5e7/use_croma.py",
+  "revision": "59505a6bcadbf36ba20767270154bf9f3067c5e7",
+  "upstream_sha256": "a38567beed29eb08108a47cdc97fe98aec50fd4be0bd98a5266bcd18aafb7c5b",
+  "changes": [
+    "Load checkpoint once with map_location=cpu and weights_only=True; architecture unchanged."
+  ]
+}

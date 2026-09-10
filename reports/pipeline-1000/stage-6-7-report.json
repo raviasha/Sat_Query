@@ -1,0 +1,17 @@
+{
+  "stages": [
+    6,
+    7
+  ],
+  "passed": true,
+  "test_area_count": 200,
+  "eligible_test_tokens": 44723,
+  "test_coverage_mae_pp": 6.155257976201707,
+  "baseline_coverage_mae_pp": 9.213653803270276,
+  "test_dominant_accuracy": 0.538742985409652,
+  "class_count": 19,
+  "test_report_sha256": "5ea2b3f79dec69055d2da056a6b2a10fc9362936e8039236b08abdd09822c4a7",
+  "per_class_csv": "/content/drive/MyDrive/SatQuery/pipeline-1000/evaluation/per-class-metrics.csv",
+  "reliability_report": "/content/drive/MyDrive/SatQuery/pipeline-1000/evaluation/reliability.json",
+  "inference_areas_verified": 1000
+}

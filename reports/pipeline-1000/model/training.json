@@ -1,0 +1,309 @@
+{
+  "feature_key": "joint_encodings",
+  "feature_contract": {
+    "checkpoint_sha256": "0238d814b53108f3574bf1ea240e38a0a6edd46173816d9a6962070561893b63",
+    "croma_source_revision": "59505a6bcadbf36ba20767270154bf9f3067c5e7",
+    "inference_implementation_sha256": "af8f432a0d1807d4893ef331763a19cddbaac0342e0cb40cfc0ff600f8c9541d",
+    "channel_profile": {
+      "optical": [
+        "B01",
+        "B02",
+        "B03",
+        "B04",
+        "B05",
+        "B06",
+        "B07",
+        "B08",
+        "B8A",
+        "B09",
+        "B11",
+        "B12"
+      ],
+      "sar": [
+        "VV",
+        "VH"
+      ],
+      "evidence": "https://github.com/zhu-xlab/SSL4EO-S12/blob/2156913c5d8e5a2c572a5b000f0d5eaed6fc3192/src/benchmark/pretrain_ssl/datasets/SSL4EO/ssl4eo_dataset.py",
+      "evidence_level": "source_dataset_verified_croma_order_inferred"
+    },
+    "normalization_profile": "croma_readme_patch_8bit_v1"
+  },
+  "classes": [
+    {
+      "index": 0,
+      "name": "Urban fabric",
+      "clc_codes": [
+        111,
+        112
+      ]
+    },
+    {
+      "index": 1,
+      "name": "Industrial or commercial units",
+      "clc_codes": [
+        121
+      ]
+    },
+    {
+      "index": 2,
+      "name": "Arable land",
+      "clc_codes": [
+        211,
+        212,
+        213
+      ]
+    },
+    {
+      "index": 3,
+      "name": "Permanent crops",
+      "clc_codes": [
+        221,
+        222,
+        223,
+        241
+      ]
+    },
+    {
+      "index": 4,
+      "name": "Pastures",
+      "clc_codes": [
+        231
+      ]
+    },
+    {
+      "index": 5,
+      "name": "Complex cultivation patterns",
+      "clc_codes": [
+        242
+      ]
+    },
+    {
+      "index": 6,
+      "name": "Land principally occupied by agriculture, with significant areas of natural vegetation",
+      "clc_codes": [
+        243
+      ]
+    },
+    {
+      "index": 7,
+      "name": "Agro-forestry areas",
+      "clc_codes": [
+        244
+      ]
+    },
+    {
+      "index": 8,
+      "name": "Broad-leaved forest",
+      "clc_codes": [
+        311
+      ]
+    },
+    {
+      "index": 9,
+      "name": "Coniferous forest",
+      "clc_codes": [
+        312
+      ]
+    },
+    {
+      "index": 10,
+      "name": "Mixed forest",
+      "clc_codes": [
+        313
+      ]
+    },
+    {
+      "index": 11,
+      "name": "Natural grassland and sparsely vegetated areas",
+      "clc_codes": [
+        321,
+        333
+      ]
+    },
+    {
+      "index": 12,
+      "name": "Moors, heathland and sclerophyllous vegetation",
+      "clc_codes": [
+        322,
+        323
+      ]
+    },
+    {
+      "index": 13,
+      "name": "Transitional woodland, shrub",
+      "clc_codes": [
+        324
+      ]
+    },
+    {
+      "index": 14,
+      "name": "Beaches, dunes, sands",
+      "clc_codes": [
+        331
+      ]
+    },
+    {
+      "index": 15,
+      "name": "Inland wetlands",
+      "clc_codes": [
+        411,
+        412
+      ]
+    },
+    {
+      "index": 16,
+      "name": "Coastal wetlands",
+      "clc_codes": [
+        421,
+        422
+      ]
+    },
+    {
+      "index": 17,
+      "name": "Inland waters",
+      "clc_codes": [
+        511,
+        512
+      ]
+    },
+    {
+      "index": 18,
+      "name": "Marine waters",
+      "clc_codes": [
+        521,
+        522,
+        523
+      ]
+    }
+  ],
+  "feature_manifest_sha256": "3d847e1341c5e9d29e76a14ab6f86428847c53af3a7e33be0f25a7b4314d6bfd",
+  "target_manifest_sha256": "86f2485ff9a7cbe8a56e95bec2e8d19fc3dff418ab25877ec39cc6391730417f",
+  "fully_labeled_tokens_only": true,
+  "input_sample_splits": {
+    "train": 600,
+    "validation": 200,
+    "test": 200
+  },
+  "eligible_tokens_by_split": {
+    "train": 134255,
+    "validation": 44848,
+    "test": 44723
+  },
+  "selected_epoch": 5,
+  "best_validation_loss": 1.5619607788300964,
+  "selection_metric": "validation_soft_target_cross_entropy",
+  "test_used_for_selection": false,
+  "max_epochs": 60,
+  "patience": 10,
+  "seed": 17,
+  "learning_rate": 0.001,
+  "batch_size": 1024,
+  "optimizer": "AdamW",
+  "weight_decay": 0.01,
+  "feature_standardization": "train-only mean/std folded into saved linear head",
+  "folded_normalization_max_abs_error": 1.4603137969970703e-06,
+  "croma_frozen": true,
+  "training_mode": "train_split_only",
+  "evaluation_scope": "validation_selection_only",
+  "loss": "unweighted_soft_target_cross_entropy",
+  "torch_version": "2.11.0+cu128",
+  "history": [
+    {
+      "epoch": 1,
+      "train_loss": 1.8233814664155357,
+      "validation_loss": 1.7250920659169697
+    },
+    {
+      "epoch": 2,
+      "train_loss": 1.3597439647337999,
+      "validation_loss": 1.616116111762516
+    },
+    {
+      "epoch": 3,
+      "train_loss": 1.2287136737818443,
+      "validation_loss": 1.5831246373911139
+    },
+    {
+      "epoch": 4,
+      "train_loss": 1.1569435273196718,
+      "validation_loss": 1.5685852434734682
+    },
+    {
+      "epoch": 5,
+      "train_loss": 1.1086980148558865,
+      "validation_loss": 1.5619607788300964
+    },
+    {
+      "epoch": 6,
+      "train_loss": 1.073381692820397,
+      "validation_loss": 1.5620001378843624
+    },
+    {
+      "epoch": 7,
+      "train_loss": 1.0466007482920727,
+      "validation_loss": 1.5624684633376809
+    },
+    {
+      "epoch": 8,
+      "train_loss": 1.0244463055108335,
+      "validation_loss": 1.5642593725638605
+    },
+    {
+      "epoch": 9,
+      "train_loss": 1.0064261607327127,
+      "validation_loss": 1.5777185120584283
+    },
+    {
+      "epoch": 10,
+      "train_loss": 0.9917610106923355,
+      "validation_loss": 1.5732122715396453
+    },
+    {
+      "epoch": 11,
+      "train_loss": 0.9783176938775602,
+      "validation_loss": 1.5820069628615827
+    },
+    {
+      "epoch": 12,
+      "train_loss": 0.9666880785089237,
+      "validation_loss": 1.590062279468173
+    },
+    {
+      "epoch": 13,
+      "train_loss": 0.9565217420023152,
+      "validation_loss": 1.5897718886583991
+    },
+    {
+      "epoch": 14,
+      "train_loss": 0.9475372573622671,
+      "validation_loss": 1.5884892544999873
+    },
+    {
+      "epoch": 15,
+      "train_loss": 0.9400796771013982,
+      "validation_loss": 1.5970844364659598
+    }
+  ],
+  "checkpoint_sha256": "b86fb9f2800b4547267144ebffe4221feffcfad436b184d4285b7f1fc669c6e3",
+  "training_mean_class_fractions": [
+    0.054009392857551575,
+    0.009648500010371208,
+    0.2022944837808609,
+    0.014330588281154633,
+    0.0963667556643486,
+    0.08540650457143784,
+    0.049366410821676254,
+    0.016422688961029053,
+    0.12876220047473907,
+    0.09456293284893036,
+    0.07834798842668533,
+    0.01365149300545454,
+    0.004585955757647753,
+    0.03648269549012184,
+    5.2954266720917076e-05,
+    0.009308894164860249,
+    1.4897023902449291e-05,
+    0.022950029000639915,
+    0.08343462646007538
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "stage": 5,
+  "passed": true,
+  "selected_epoch": 5,
+  "epochs_run": 15,
+  "best_validation_loss": 1.5619607788300964,
+  "checkpoint_sha256": "b86fb9f2800b4547267144ebffe4221feffcfad436b184d4285b7f1fc669c6e3",
+  "train_areas": 600,
+  "validation_areas": 200,
+  "test_used_for_selection": false,
+  "eligible_tokens_by_split": {
+    "train": 134255,
+    "validation": 44848,
+    "test": 44723
+  }
+}

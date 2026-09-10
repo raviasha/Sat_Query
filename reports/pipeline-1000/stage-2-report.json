@@ -1,0 +1,16 @@
+{
+  "stage": 2,
+  "passed": true,
+  "sample_count": 1000,
+  "tokens_per_area": 225,
+  "feature_dimension": 768,
+  "spatial_features": [
+    "optical_encodings",
+    "SAR_encodings",
+    "joint_encodings"
+  ],
+  "feature_manifest_sha256": "3d847e1341c5e9d29e76a14ab6f86428847c53af3a7e33be0f25a7b4314d6bfd",
+  "device": "cuda",
+  "checkpoint_sha256": "0238d814b53108f3574bf1ea240e38a0a6edd46173816d9a6962070561893b63",
+  "output": "/content/drive/MyDrive/SatQuery/pipeline-1000/features"
+}

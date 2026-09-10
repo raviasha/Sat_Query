@@ -1,0 +1,15 @@
+data/
+.venv/
+.pytest_cache/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.ruff_cache/
+build/
+dist/
+
+# Local OS/editor files and authentication configuration
+.DS_Store
+.env
+.env.*
+!.env.example

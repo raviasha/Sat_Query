@@ -1,0 +1,32 @@
+{
+  "stage": 1,
+  "passed": true,
+  "sample_count": 1000,
+  "splits": {
+    "train": 600,
+    "validation": 200,
+    "test": 200
+  },
+  "optical_shape": [
+    1000,
+    12,
+    120,
+    120
+  ],
+  "sar_shape": [
+    1000,
+    2,
+    120,
+    120
+  ],
+  "reference_map_shape": [
+    1000,
+    120,
+    120
+  ],
+  "stored_batches": 32,
+  "prepared_manifest_sha256": "358a87e6ad63a8ca1cd5998bd5c2a805764f6df8afa98453b14454e5d03f5323",
+  "download_report_sha256": "a745e713f3e5471952700bffcc495deedbc1c9fdf3068d6e1c91218cf8654651",
+  "output": "/content/drive/MyDrive/SatQuery/pipeline-1000/prepared",
+  "excluded_areas": []
+}
