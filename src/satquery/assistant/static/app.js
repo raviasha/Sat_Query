@@ -58,8 +58,13 @@ function formatValue(value) {
     if (Number.isInteger(value)) return value.toLocaleString();
     return Math.abs(value) < 1 ? value.toFixed(4) : value.toLocaleString(undefined, { maximumFractionDigits: 2 });
   }
-  if (Array.isArray(value)) return value.join(", ");
-  if (value && typeof value === "object") return JSON.stringify(value);
+  if (Array.isArray(value)) return value.map((item) => formatValue(item)).join(", ");
+  if (value && typeof value === "object") {
+    if (typeof value.name === "string" && typeof value.estimated_fraction === "number") {
+      return `${value.name} ${(value.estimated_fraction * 100).toFixed(2)}%`;
+    }
+    return JSON.stringify(value);
+  }
   return String(value ?? "—");
 }
 

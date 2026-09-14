@@ -1,0 +1,189 @@
+{
+  "format_version": 1,
+  "status": "passed_with_explicit_open_gaps",
+  "verified_on": "2026-09-14",
+  "integration_base_commit": "a6387134eb1f039c21020819457281427d3ee90d",
+  "baseline": {
+    "commit": "65a4514522ada18b0ee725f67cf34c657018e151",
+    "tests_passed": 117,
+    "tests_skipped": 5,
+    "warnings": 44,
+    "warning_kind": "existing Rasterio/Affine PendingDeprecationWarning"
+  },
+  "artifacts": {
+    "storage": "external artifacts are intentionally excluded from Git",
+    "croma_checkpoint": {
+      "artifact_id": "external/pinned-croma-base/CROMA_base.pt",
+      "sha256": "0238d814b53108f3574bf1ea240e38a0a6edd46173816d9a6962070561893b63",
+      "verified_official_checkpoint": true
+    },
+    "cached_features": {
+      "artifact_id": "external/three-sample-demo/features.pt",
+      "sha256": "2e76c6b43024dc47d93a9a5a35f4389d573e1d2cd5e4a61fa64b2cc55edbc553"
+    },
+    "heads": {
+      "optical": {
+        "artifact_id": "external/three-sample-demo/optical/head.pt",
+        "sha256": "96f8db16727bcc415a1879d15d7d30d47d0f99cbf4e67dfc3a03b2c22730a2b6"
+      },
+      "SAR": {
+        "artifact_id": "external/three-sample-demo/SAR/head.pt",
+        "sha256": "941f6993141af220108c319f27994c41e8f9ed4196b3b8fd188435af994ab3f3"
+      },
+      "joint": {
+        "artifact_id": "external/three-sample-demo/joint/head.pt",
+        "sha256": "6383cbe018ab5dcb2f3f2f5fce8dcf79a11bd260afd7537f8c45f885b1989ee2"
+      }
+    },
+    "head_training_disclosure": {
+      "training_mode": "demo_fit_all",
+      "evaluation_scope": "training_data_only",
+      "sample_count": 3,
+      "claim": "integration wiring only; no held-out or production-performance claim"
+    },
+    "reference_free_bundles": {
+      "optical": {
+        "artifact_id": "external/three-sample-demo/bundles/optical.zip",
+        "sha256": "33ee8cbf5d9404d31da3ad257b0310cffc1179cdada9f447d4ed7986b6362b9d"
+      },
+      "SAR": {
+        "artifact_id": "external/three-sample-demo/bundles/SAR.zip",
+        "sha256": "4e1610baf6b61056bfa675856f72500232c5b1973b3ddc84f65ff39954d68dea"
+      },
+      "paired": {
+        "artifact_id": "external/three-sample-demo/bundles/paired.zip",
+        "sha256": "4ec6450e2587a06677204a2c04b66fab7fbd0a536d6d96b43954ffae31f86bf5"
+      }
+    }
+  },
+  "reference_free_input_checks": [
+    {"bundle": "optical", "kind": "single", "member_count": 2, "normalized_equals_existing_tensor": true, "reference_maps_present": false},
+    {"bundle": "SAR", "kind": "single", "member_count": 2, "normalized_equals_existing_tensor": true, "reference_maps_present": false},
+    {"bundle": "paired", "kind": "cross_modal", "member_count": 3, "normalized_equals_existing_tensor": true, "reference_maps_present": false}
+  ],
+  "real_croma_checks": {
+    "optical": {
+      "shape": [15, 15, 19],
+      "fractions_sum_one": true,
+      "top_estimates": "Broad-leaved forest 40.39%, Inland waters 33.91%, Arable land 25.66%"
+    },
+    "SAR": {
+      "shape": [15, 15, 19],
+      "fractions_sum_one": true,
+      "top_estimates": "Broad-leaved forest 43.76%, Inland waters 31.05%, Arable land 25.18%"
+    },
+    "joint": {
+      "shape": [15, 15, 19],
+      "fractions_sum_one": true,
+      "joint_encoder_inputs": {"optical": "optical", "SAR": "SAR"},
+      "fusion_recorded": "Both optical and SAR tensors fed the CROMA joint encoder.",
+      "top_estimates": "Broad-leaved forest 40.46%, Inland waters 34.25%, Arable land 25.29%",
+      "sensor_comparison_scope": "descriptive only; no accuracy improvement claim"
+    },
+    "cached_feature_equality": "exact for optical, SAR, and joint tensors",
+    "public_payload": {
+      "json_safe": true,
+      "contains_local_paths": false,
+      "contains_secrets": false,
+      "contains_raw_tensors": false,
+      "contains_reference_maps_or_annotation_answers": false
+    }
+  },
+  "http_acceptance": {
+    "status_code": 200,
+    "capabilities": ["optical", "SAR", "joint"],
+    "local_provider": true,
+    "paired_location_request": {
+      "status_code": 200,
+      "answer_source": "deterministic_tool",
+      "qualifying_water_cells_at_0_5": 76,
+      "opaque_result_id_characters": 32
+    },
+    "downloads": {
+      "report_json": 200,
+      "evidence_geojson": 200,
+      "preview_png": 200,
+      "geojson_feature_count": 76,
+      "preview_content_type": "image/png"
+    },
+    "unsupported_object_request": {
+      "status_code": 200,
+      "abstained": true,
+      "actionable_alternative_returned": true
+    }
+  },
+  "openai_live_check": {
+    "attempted": true,
+    "model": "gpt-4.1-mini-2025-04-14",
+    "provider_role": "tool_routing_only",
+    "succeeded": false,
+    "http_status": 401,
+    "public_api_status": 502,
+    "error_type": "AuthenticationError",
+    "public_error": "OpenAI authentication failed; verify OPENAI_API_KEY on the server or choose local mode.",
+    "error_sanitized": true,
+    "key_persisted": false,
+    "local_mode_remained_available": true
+  },
+  "browser_acceptance": {
+    "desktop": {
+      "viewport_width": 2560,
+      "horizontal_overflow": false,
+      "status_visible": true,
+      "demo_disclosure_visible": true,
+      "successful_local_question": true,
+      "source_preview_visible": true,
+      "source_preview_dimensions": [120, 120],
+      "clickable_grid_cells": 225,
+      "readable_measurements": true,
+      "limitations_visible": true,
+      "observable_trace_visible": true,
+      "report_and_geojson_downloads_visible": true
+    },
+    "mobile": {
+      "viewport": [390, 844],
+      "horizontal_overflow": false,
+      "single_column_layout": true,
+      "successful_result_visible": true,
+      "clickable_grid_cells": 225
+    },
+    "error_state": {
+      "trigger": "out-of-range cached demo index",
+      "actionable_message_visible": true,
+      "local_path_exposed": false
+    },
+    "console_warning_or_error_count": 0,
+    "preview_note": "real input-derived preview verified through the production HTTP route and a configured cached demo preview"
+  },
+  "packaging": {
+    "lockfile_assistant_dependencies": ["fastapi", "httpx", "openai", "pillow", "python-multipart", "uvicorn"],
+    "wheel_built": true,
+    "wheel_assistant_modules_imported": 7,
+    "wheel_entry_point": "satquery-serve = satquery.assistant.web:main",
+    "wheel_assistant_extra_complete": true
+  },
+  "verification": {
+    "focused_assistant_tests": {"passed": 96, "warnings": 4},
+    "full_suite": {"passed": 213, "skipped": 5, "warnings": 48},
+    "ruff_lint": "passed for src, tests, and adaptation driver",
+    "task_owned_format_check": "passed",
+    "repository_format_check": "six pre-existing unrelated files require formatting; unchanged by this milestone",
+    "javascript_syntax": "passed",
+    "cli_help": ["satquery.assistant.web", "satquery.assistant.text_adaptation", "satquery.assistant.task_evaluation"],
+    "git_diff_check": "passed"
+  },
+  "adapter_and_benchmark_status": {
+    "real_text_adaptation_trained": false,
+    "benchmarks_evaluated": [],
+    "real_temporal_dataset_evaluated": false,
+    "open_gaps": [
+      "successfully trained BigEarthNet.txt image-text adapter",
+      "official VRSBench, RSVQA, and CDVQA adapters and scorers",
+      "validated open-ended VQA or caption generator",
+      "benchmarked temporal change model",
+      "direct Cartosat-2S and RISAT sensor profiles",
+      "SAC evaluation",
+      "calibrated confidence"
+    ]
+  }
+}

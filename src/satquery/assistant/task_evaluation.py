@@ -231,9 +231,15 @@ def benchmark_compatibility_manifest() -> dict:
                 "current_gap": "No temporal-image encoder, CDVQA adapter, or official scorer is integrated",
             },
             "SAC": {
-                "expected_modality": "remote-sensing image plus scene caption",
+                "expected_modality": (
+                    "pre-georeferenced co-registered Cartosat-2S optical and RISAT SAR "
+                    "evaluation inputs"
+                ),
                 "status": "unsupported",
-                "current_gap": "No SAC dataset adapter or caption-generation model is integrated",
+                "current_gap": (
+                    "No direct Cartosat-2S/RISAT sensor profiles, hidden evaluation adapter, "
+                    "or SAC evaluation results are integrated"
+                ),
             },
         },
     }

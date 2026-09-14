@@ -204,6 +204,11 @@ def test_benchmark_compatibility_manifest_is_candid_about_gaps():
         manifest["benchmarks"]["CDVQA"]["expected_modality"]
         == "paired temporal imagery plus question"
     )
+    assert (
+        manifest["benchmarks"]["SAC"]["expected_modality"]
+        == "pre-georeferenced co-registered Cartosat-2S optical and RISAT SAR evaluation inputs"
+    )
+    assert "hidden evaluation" in manifest["benchmarks"]["SAC"]["current_gap"].lower()
     assert all(item["status"] == "unsupported" for item in manifest["benchmarks"].values())
     assert "adapter" in manifest["benchmarks"]["VRSBench"]["current_gap"].lower()
 

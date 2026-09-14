@@ -162,6 +162,7 @@ def test_status_and_browser_explain_capabilities_and_demo_fit_all(tmp_path):
     assert "demo_fit_all" in page.text
     assert "OpenAI tool router" in page.text
     assert "Optional OpenAI wording" not in page.text
+    assert page.text.count('aria-label="Demo sample index"') == 1
     assert page.headers["content-security-policy"].startswith("default-src 'self'")
 
 
