@@ -170,6 +170,9 @@ uses server-generated download URLs only:
 - `preview.png` is the input-derived optical or SAR preview when available.
 
 Reports are JSON-safe and omit normalized tensors, raw pixels, temporary/server paths, and secrets.
+The result panel visibly renders the authoritative loaded-head training mode and a concise scene,
+feature-key, checkpoint, and head-digest summary. The cached-demo status identifies
+`--demo-fit-all` only as a manual CLI label.
 The observable trace records the selected task/tool, fixed model/provider role, accepted parameters,
 and bounded function-call result. It intentionally excludes internal model reasoning.
 

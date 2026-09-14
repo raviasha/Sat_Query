@@ -172,11 +172,55 @@ function renderGrid(evidence) {
   legend.append(low, ramp, high);
 }
 
+function shortDigest(value) {
+  return typeof value === "string" && /^[0-9a-f]{64}$/.test(value)
+    ? `${value.slice(0, 12)}…`
+    : null;
+}
+
+function renderModelDisclosure(report) {
+  const disclosure = report.training_disclosure || {};
+  const modes = Array.isArray(disclosure.head_training_modes)
+    ? disclosure.head_training_modes.filter((value) => typeof value === "string").slice(0, 4)
+    : [];
+  const modeText = modes.length
+    ? `Loaded head training mode: ${modes.join(" · ")}`
+    : "Loaded head training mode: unavailable";
+  const manualText = disclosure.manual_demo_fit_all_label
+    ? " · Manual CLI demo label: demo_fit_all"
+    : "";
+  setText(byId("training-disclosure"), `${modeText}${manualText}`);
+
+  const list = byId("scene-provenance");
+  list.replaceChildren();
+  const scenes = Array.isArray(report.scene_provenance) ? report.scene_provenance.slice(0, 4) : [];
+  scenes.forEach((scene) => {
+    if (!scene || typeof scene !== "object") return;
+    const parts = [scene.scene_id, scene.modality, scene.feature_key].filter(
+      (value) => typeof value === "string" && value
+    );
+    const checkpoint = shortDigest(scene.checkpoint_sha256);
+    const head = shortDigest(scene.head_sha256);
+    if (checkpoint) parts.push(`CROMA ${checkpoint}`);
+    if (head) parts.push(`head ${head}`);
+    if (!parts.length) return;
+    const item = document.createElement("li");
+    setText(item, parts.join(" · "));
+    list.append(item);
+  });
+  if (!list.children.length) {
+    const item = document.createElement("li");
+    setText(item, "No public scene provenance was reported.");
+    list.append(item);
+  }
+}
+
 function renderResult(report) {
   byId("empty-result").classList.add("hidden");
   byId("error-box").classList.add("hidden");
   byId("result").classList.remove("hidden");
   setText(byId("deterministic-answer"), report.deterministic_answer || report.answer);
+  renderModelDisclosure(report);
   renderMeasurements(report.measurements);
   renderGrid(report.evidence);
 
@@ -251,7 +295,7 @@ fetch("/api/status")
     byId("demo-card").classList.toggle("hidden", !status.demo.available);
     setText(
       byId("demo-label"),
-      `${status.demo.capability} cached features · demo_fit_all: ${status.demo.demo_fit_all ? "yes" : "no"}`
+      `${status.demo.capability} cached features · Manual CLI demo label: ${status.demo.manual_demo_fit_all_label ? "demo_fit_all" : "not set"}`
     );
   })
   .catch(() => {

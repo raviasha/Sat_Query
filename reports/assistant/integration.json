@@ -159,6 +159,14 @@
       "successful_result_visible": true,
       "clickable_grid_cells": 225
     },
+    "training_disclosure_acceptance": {
+      "viewport": [1200, 696],
+      "cached_demo_actual_head_mode_visible": "demo_fit_all",
+      "ordinary_optical_upload_actual_head_mode_visible": "demo_fit_all",
+      "manual_demo_label_visible_as_not_set": true,
+      "safe_scene_provenance_summary_visible": true,
+      "browser_console_warning_or_error_count": 0
+    },
     "error_state": {
       "trigger": "out-of-range cached demo index",
       "actionable_message_visible": true,

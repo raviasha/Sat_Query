@@ -683,7 +683,7 @@ def create_app(
             "demo": {
                 "available": services.demo_features is not None,
                 "capability": services.demo_capability,
-                "demo_fit_all": services.demo_fit_all,
+                "manual_demo_fit_all_label": services.demo_fit_all,
             },
             "limits": {
                 "question_characters": MAX_QUESTION_LENGTH,

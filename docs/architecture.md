@@ -301,8 +301,10 @@ provenance, uses opaque result IDs, cleans temporary uploads, and persists only 
 preview artifacts under the configured output directory. It exposes status, advanced ZIP,
 guided TIFF, cached demo, and result-download routes. The browser renders untrusted values through
 `textContent`, shows capabilities/provider/demo status, a clickable evidence grid, trace,
-limitations, and downloads. The server binds to localhost by default and rejects cross-origin API
-requests. See [the assistant guide](assistant.md).
+limitations, authoritative loaded-head training mode, a concise safe provenance summary, and
+downloads. Cached-demo status labels `--demo-fit-all` only as a manual CLI value. The server binds
+to localhost by default and rejects cross-origin API requests. See
+[the assistant guide](assistant.md).
 
 ### 15. Adapt scene features to text and evaluate tasks
 

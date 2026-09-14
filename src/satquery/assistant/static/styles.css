@@ -73,6 +73,10 @@ pre { max-width: 100%; overflow: auto; padding: 14px; border-radius: 12px; backg
 #result > * { min-width: 0; }
 .answer-card { padding: 17px 18px; border-left: 4px solid var(--lime); border-radius: 4px 13px 13px 4px; background: #f4f8e8; }
 .answer-card p { margin: 7px 0 0; line-height: 1.58; overflow-wrap: anywhere; }
+.model-disclosure { margin-top: 14px; padding: 13px 15px; border: 1px solid var(--line); border-radius: 10px; background: #fafbf7; }
+.model-disclosure h3 { margin: 0 0 7px; }
+.model-disclosure p { margin: 0; font-weight: 650; overflow-wrap: anywhere; }
+.model-disclosure ul { margin: 7px 0 0; padding-left: 20px; color: var(--muted); overflow-wrap: anywhere; }
 .answer-label { font-size: .68rem; font-weight: 850; text-transform: uppercase; letter-spacing: .11em; color: var(--green); }
 .source-preview { display: block; width: min(100%, 420px); aspect-ratio: 1; object-fit: cover; border-radius: 15px; image-rendering: auto; }
 .table-wrap { overflow-x: auto; margin-top: 10px; }

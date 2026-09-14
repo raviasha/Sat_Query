@@ -185,7 +185,7 @@
               </select>
               <button type="submit">Run demo</button>
             </form>
-            <p class="demo-warning"><strong>demo_fit_all</strong> is shown when the configured head was fit on all supplied demo splits. It is not held-out evidence.</p>
+            <p class="demo-warning">The status shows only the manual CLI demo label. Each completed result reads the authoritative training mode from the loaded head. <strong>demo_fit_all</strong> is not held-out evidence.</p>
           </section>
         </section>
 
@@ -207,6 +207,11 @@
               <span class="answer-label">Deterministic measurement</span>
               <p id="deterministic-answer"></p>
             </div>
+            <section class="model-disclosure" aria-labelledby="model-disclosure-heading">
+              <h3 id="model-disclosure-heading">Loaded model provenance</h3>
+              <p id="training-disclosure"></p>
+              <ul id="scene-provenance"></ul>
+            </section>
             <img id="source-preview" class="source-preview hidden" alt="Satellite source preview">
             <section>
               <h3>Measurements</h3>

@@ -199,7 +199,7 @@ def test_status_and_browser_explain_capabilities_and_demo_fit_all(tmp_path):
     assert status.json()["demo"] == {
         "available": True,
         "capability": "joint",
-        "demo_fit_all": True,
+        "manual_demo_fit_all_label": True,
     }
     assert page.status_code == 200
     assert "Guided GeoTIFF upload" in page.text
@@ -207,8 +207,17 @@ def test_status_and_browser_explain_capabilities_and_demo_fit_all(tmp_path):
     assert "demo_fit_all" in page.text
     assert "OpenAI tool router" in page.text
     assert "Optional OpenAI wording" not in page.text
+    assert 'id="training-disclosure"' in page.text
+    assert 'id="scene-provenance"' in page.text
     assert page.text.count('aria-label="Demo sample index"') == 1
     assert page.headers["content-security-policy"].startswith("default-src 'self'")
+    script = client.get("/static/app.js")
+    assert script.status_code == 200
+    assert "report.training_disclosure" in script.text
+    assert "report.scene_provenance" in script.text
+    assert "Loaded head training mode:" in script.text
+    assert "Manual CLI demo label:" in script.text
+    assert 'setText(byId("training-disclosure")' in script.text
 
 
 def test_advanced_upload_creates_durable_opaque_report_and_geojson(tmp_path):
