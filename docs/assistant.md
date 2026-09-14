@@ -1,6 +1,6 @@
 # SatQuery browser assistant
 
-**Status: 14 September 2026.** The browser application is a working, bounded prototype around
+**Status: 15 September 2026.** The browser application is a working, bounded prototype around
 the existing CROMA land-cover pipeline. This guide separates verified behavior from demo artifacts
 and capabilities that still need model training or benchmark evaluation.
 
@@ -33,6 +33,10 @@ uv sync --locked --no-editable \
   --extra dev --extra downloads --extra features --extra assistant
 ```
 
+The `assistant` extra itself includes `einops`, the tensor rearrangement dependency imported by the
+vendored CROMA runtime. The additional `features` extra installs feature-export dependencies such
+as `huggingface-hub`.
+
 Start the local service with the pinned CROMA checkpoint and the heads you intend to expose:
 
 ```bash
@@ -60,9 +64,11 @@ To display a cached-feature demonstration without rerunning CROMA, add:
   --demo-fit-all
 ```
 
-`--demo-fit-all` is a visible disclosure. The integration samples were fit on all three supplied
-demo areas and provide no held-out or production-performance evidence. Model weights, datasets,
-and the 742 MiB CROMA checkpoint are intentionally outside Git.
+`--demo-fit-all` is a visible manual label. API and downloaded reports derive their training-mode
+disclosure from the loaded head's scene provenance, so the flag is never the sole source. The
+integration samples were fit on all three supplied demo areas and provide no held-out or
+production-performance evidence. Model weights, datasets, and the 742 MiB CROMA checkpoint are
+intentionally outside Git.
 
 ## Input contracts
 
@@ -158,7 +164,7 @@ Successful runs create an opaque result ID beneath the configured output directo
 uses server-generated download URLs only:
 
 - `report.json` contains the input summary, deterministic result, trace, limitations, model hashes,
-  and download links;
+  bounded allowlisted scene/model provenance, head training-mode disclosure, and download links;
 - `evidence.geojson` contains WGS84 feature polygons for spatial results, or an empty feature
   collection when the tool has no polygons; and
 - `preview.png` is the input-derived optical or SAR preview when available.
@@ -186,7 +192,8 @@ persistent root; it never reruns image preparation or CROMA extraction:
 ```bash
 PYTHONPATH=src python scripts/colab_adapt_text.py --edu-p /persistent/SatQuery prepare \
   --annotations /persistent/SatQuery/annotations/matched \
-  --features /persistent/SatQuery/features --name text-pairs
+  --features /persistent/SatQuery/features \
+  --splits train,validation,test --name text-pairs
 
 PYTHONPATH=src python scripts/colab_adapt_text.py --edu-p /persistent/SatQuery train \
   --prepared /persistent/SatQuery/text-adaptation/text-pairs --name text-adapter
@@ -197,10 +204,11 @@ PYTHONPATH=src python scripts/colab_adapt_text.py --edu-p /persistent/SatQuery e
   --split test --name retrieval-test.json
 ```
 
-Evaluation reports held-out retrieval rank over the declared candidate set. Test never promotes a
-checkpoint. Similarity is not calibrated confidence. The current repository contains the workflow
-and offline tests, but no successfully trained real BigEarthNet.txt adapter; the configured OpenAI
-key used during integration returned HTTP 401.
+The prepare command includes test records because the shown evaluation reports the test split.
+Training still consumes train only, validation selects the checkpoint, and test is report-only and
+never promotes a checkpoint. Similarity is not calibrated confidence. The current repository
+contains the workflow and offline tests, but no successfully trained real BigEarthNet.txt adapter;
+the configured OpenAI key used during integration returned HTTP 401.
 
 ## Task evaluation
 

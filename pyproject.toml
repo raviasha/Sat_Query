@@ -14,6 +14,7 @@ dev = ["pytest>=8", "ruff>=0.11", "lmdb>=2.3"]
 downloads = ["safetensors>=0.8"]
 features = ["einops>=0.8", "huggingface-hub>=0.30"]
 assistant = [
+  "einops>=0.8",
   "fastapi>=0.115",
   "httpx>=0.28",
   "openai>=1.75",

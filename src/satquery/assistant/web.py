@@ -37,9 +37,71 @@ from .inputs import MAX_MEMBERS, MAX_UPLOAD_SIZE, load_bundle
 from .runtime import CapabilityError, CoverageRuntime
 
 MAX_REQUEST_SIZE = MAX_UPLOAD_SIZE + 256 * 1024
+REQUEST_SPOOL_MEMORY_SIZE = 1024 * 1024
 MAX_FORM_FIELDS = 32
 _RESULT_ID = re.compile(r"^[0-9a-f]{32}$")
 _TIFF_SUFFIX = re.compile(r"\.tiff?$", re.IGNORECASE)
+_SHA256 = re.compile(r"^[0-9a-f]{64}$")
+_SAFE_IDENTIFIER = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:+ -]{0,127}$")
+_SENSITIVE_TEXT = re.compile(
+    r"(?:sk-[A-Za-z0-9]|api[_-]?key|authorization:|bearer\s|/Users/|/home/|/tmp/|"
+    r"[A-Za-z]:\\\\Users\\\\)",
+    re.IGNORECASE,
+)
+
+
+class _BoundedRequestBodyMiddleware:
+    """Count and spool upload bodies before multipart parsing, then replay bounded chunks."""
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if (
+            scope["type"] != "http"
+            or scope.get("method") not in {"POST", "PUT", "PATCH"}
+            or scope.get("path") not in {"/api/analyze", "/api/analyze-files", "/api/demo"}
+        ):
+            await self.app(scope, receive, send)
+            return
+        state = scope["app"].state
+        maximum = int(state.request_size_limit)
+        memory_size = int(state.request_spool_memory_size)
+        with tempfile.SpooledTemporaryFile(
+            max_size=memory_size, mode="w+b", prefix="satquery-body-"
+        ) as spool:
+            total = 0
+            while True:
+                message = await receive()
+                if message["type"] == "http.disconnect":
+                    return
+                body = message.get("body", b"")
+                total += len(body)
+                if total > maximum:
+                    response = JSONResponse(
+                        status_code=413, content={"detail": "request is too large"}
+                    )
+                    await response(scope, receive, send)
+                    return
+                spool.write(body)
+                if not message.get("more_body", False):
+                    break
+            spool.seek(0)
+            remaining = total
+
+            async def replay_receive():
+                nonlocal remaining
+                if remaining:
+                    body = spool.read(min(1024 * 1024, remaining))
+                    remaining -= len(body)
+                    return {
+                        "type": "http.request",
+                        "body": body,
+                        "more_body": remaining > 0,
+                    }
+                return await receive()
+
+            await self.app(scope, replay_receive, send)
 
 
 @dataclass
@@ -250,6 +312,171 @@ def _evidence_geojson(result: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _safe_identifier(value: Any) -> str | None:
+    if not isinstance(value, str) or not _SAFE_IDENTIFIER.fullmatch(value):
+        return None
+    if _SENSITIVE_TEXT.search(value):
+        return None
+    return value
+
+
+def _safe_digest(value: Any) -> str | None:
+    return value if isinstance(value, str) and _SHA256.fullmatch(value) else None
+
+
+def _safe_text(value: Any, *, maximum: int = 500) -> str | None:
+    if (
+        not isinstance(value, str)
+        or not value
+        or len(value) > maximum
+        or any(ord(character) < 32 and character not in "\n\t" for character in value)
+        or _SENSITIVE_TEXT.search(value)
+    ):
+        return None
+    return value
+
+
+def _public_feature_contract(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        return {}
+    result: dict[str, Any] = {}
+    for key in ("checkpoint_sha256", "inference_implementation_sha256"):
+        if digest := _safe_digest(value.get(key)):
+            result[key] = digest
+    for key in ("croma_source_revision", "normalization_profile"):
+        if identifier := _safe_identifier(value.get(key)):
+            result[key] = identifier
+    profile = value.get("channel_profile")
+    if isinstance(profile, dict):
+        public_profile: dict[str, Any] = {}
+        for key in ("optical", "sar"):
+            bands = profile.get(key)
+            if (
+                isinstance(bands, list)
+                and len(bands) <= 16
+                and all(_safe_identifier(band) is not None for band in bands)
+            ):
+                public_profile[key] = bands
+        for key in ("evidence", "evidence_level"):
+            if identifier := _safe_identifier(profile.get(key)):
+                public_profile[key] = identifier
+        if public_profile:
+            result["channel_profile"] = public_profile
+    return result
+
+
+def _public_sensor_comparison(value: Any) -> dict[str, Any] | None:
+    if not isinstance(value, dict):
+        return None
+    coverage = value.get("top_scene_coverage")
+    public_coverage: dict[str, Any] = {}
+    if isinstance(coverage, dict):
+        class_names = {item["name"] for item in class_schema()}
+        for modality in ("optical", "SAR", "joint"):
+            entries = coverage.get(modality)
+            if not isinstance(entries, list) or len(entries) > 3:
+                continue
+            selected = []
+            for entry in entries:
+                if not isinstance(entry, dict) or entry.get("name") not in class_names:
+                    continue
+                fraction = entry.get("estimated_fraction")
+                if (
+                    isinstance(fraction, bool)
+                    or not isinstance(fraction, (int, float))
+                    or not 0 <= fraction <= 1
+                ):
+                    continue
+                selected.append({"name": entry["name"], "estimated_fraction": float(fraction)})
+            if selected:
+                public_coverage[modality] = selected
+    result: dict[str, Any] = {}
+    if public_coverage:
+        result["top_scene_coverage"] = public_coverage
+    if interpretation := _safe_text(value.get("interpretation")):
+        result["interpretation"] = interpretation
+    return result or None
+
+
+def _public_scene_provenance(scenes: list[Any]) -> list[dict[str, Any]]:
+    records = []
+    for scene in scenes[:4]:
+        provenance = getattr(scene, "provenance", None)
+        if not isinstance(provenance, dict):
+            continue
+        record: dict[str, Any] = {}
+        for output_key, value in (
+            ("scene_id", getattr(scene, "id", None)),
+            ("modality", getattr(scene, "modality", None)),
+            ("source", provenance.get("source")),
+            ("model", provenance.get("model")),
+            ("model_mode", provenance.get("model_mode")),
+            ("feature_key", provenance.get("feature_key")),
+            ("head_training_mode", provenance.get("head_training_mode")),
+            ("head_evaluation_scope", provenance.get("head_evaluation_scope")),
+        ):
+            if identifier := _safe_identifier(value):
+                record[output_key] = identifier
+        for key in (
+            "checkpoint_sha256",
+            "head_sha256",
+            "feature_manifest_sha256",
+        ):
+            if digest := _safe_digest(provenance.get(key)):
+                record[key] = digest
+        contract = _public_feature_contract(provenance.get("feature_contract"))
+        if contract:
+            record["feature_contract"] = contract
+        observations = provenance.get("source_observations")
+        if (
+            isinstance(observations, list)
+            and len(observations) <= 4
+            and all(_safe_identifier(item) is not None for item in observations)
+        ):
+            record["source_observations"] = observations
+        selected_index = provenance.get("selected_index")
+        if (
+            isinstance(selected_index, int)
+            and not isinstance(selected_index, bool)
+            and 0 <= selected_index <= 1_000_000
+        ):
+            record["selected_index"] = selected_index
+        if prediction_units := _safe_text(provenance.get("prediction_units"), maximum=100):
+            record["prediction_units"] = prediction_units
+        encoder_inputs = provenance.get("joint_encoder_inputs")
+        if isinstance(encoder_inputs, dict):
+            selected_inputs = {
+                key: identifier
+                for key in ("optical", "SAR")
+                if (identifier := _safe_identifier(encoder_inputs.get(key))) is not None
+            }
+            if selected_inputs:
+                record["joint_encoder_inputs"] = selected_inputs
+        if fusion := _safe_text(provenance.get("fusion")):
+            record["fusion"] = fusion
+        if comparison := _public_sensor_comparison(provenance.get("sensor_comparison")):
+            record["sensor_comparison"] = comparison
+        records.append(record)
+    return records
+
+
+def _training_disclosure(
+    provenance: list[dict[str, Any]], *, manual_demo_fit_all: bool
+) -> dict[str, Any]:
+    modes = sorted(
+        {
+            item["head_training_mode"]
+            for item in provenance
+            if item.get("head_training_mode") in {"demo_fit_all", "train_split_only"}
+        }
+    )
+    return {
+        "head_training_modes": modes,
+        "contains_demo_fit_all": "demo_fit_all" in modes,
+        "manual_demo_fit_all_label": bool(manual_demo_fit_all),
+    }
+
+
 def _artifact_path(output_dir: Path, result_id: str, filename: str) -> Path:
     if not _RESULT_ID.fullmatch(result_id):
         raise HTTPException(status_code=404, detail="result not found")
@@ -281,6 +508,13 @@ def _persist_result(
     report = dict(result)
     report["result_id"] = result_id
     report["input_summary"] = summary
+    report["scene_provenance"] = _public_scene_provenance(scenes)
+    report["training_disclosure"] = _training_disclosure(
+        report["scene_provenance"],
+        manual_demo_fit_all=(
+            services.demo_fit_all and summary.get("source") == "configured_cached_features"
+        ),
+    )
     base = f"/api/results/{result_id}"
     downloads = {"report": f"{base}/report.json", "geojson": f"{base}/evidence.geojson"}
     report["downloads"] = downloads
@@ -388,6 +622,9 @@ def create_app(
         bundle_loader=bundle_loader,
         inference_lock=asyncio.Lock(),
     )
+    app.state.request_size_limit = MAX_REQUEST_SIZE
+    app.state.request_spool_memory_size = REQUEST_SPOOL_MEMORY_SIZE
+    app.add_middleware(_BoundedRequestBodyMiddleware)
 
     @app.middleware("http")
     async def local_request_boundary(request: Request, call_next):
@@ -395,7 +632,7 @@ def create_app(
             content_length = request.headers.get("content-length")
             if content_length:
                 try:
-                    if int(content_length) > MAX_REQUEST_SIZE:
+                    if int(content_length) > app.state.request_size_limit:
                         return JSONResponse(
                             status_code=413, content={"detail": "request is too large"}
                         )
@@ -472,7 +709,7 @@ def create_app(
             return await _analyze_bundle(services, bundle, question, provider)
         except ProviderError as exc:
             raise HTTPException(status_code=502, detail=str(exc)) from None
-        except (CapabilityError, ValueError) as exc:
+        except (CapabilityError, TypeError, ValueError) as exc:
             raise HTTPException(
                 status_code=422, detail=_safe_error(str(exc), temporary_root=root)
             ) from None
@@ -551,8 +788,14 @@ def create_app(
                     "source": "configured_cached_features",
                     "selected_index": index,
                     "capability": services.demo_capability,
-                    "demo_fit_all": services.demo_fit_all,
                 }
+                provenance = _public_scene_provenance([scene])
+                disclosure = _training_disclosure(
+                    provenance, manual_demo_fit_all=services.demo_fit_all
+                )
+                summary["head_training_modes"] = disclosure["head_training_modes"]
+                summary["demo_fit_all"] = disclosure["contains_demo_fit_all"]
+                summary["manual_demo_fit_all_label"] = services.demo_fit_all
                 result = await asyncio.to_thread(
                     services.controller.answer,
                     question,

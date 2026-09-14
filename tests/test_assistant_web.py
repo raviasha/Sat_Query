@@ -1,7 +1,9 @@
 import io
 import json
+import tempfile
 import zipfile
 from pathlib import Path
+from types import SimpleNamespace
 
 import numpy as np
 import pytest
@@ -41,6 +43,49 @@ class _Runtime:
     def analyze_cached(self, features, *, selected_index, capability):
         self.demo_calls.append((Path(features), selected_index, capability))
         return object()
+
+
+def _provenance_scene(*, source="live_croma_inference"):
+    return SimpleNamespace(
+        id="observation-1",
+        modality="joint",
+        preview=None,
+        provenance={
+            "source": source,
+            "model": "CROMA-Base",
+            "model_mode": "both",
+            "feature_key": "joint_encodings",
+            "feature_contract": {
+                "checkpoint_sha256": "a" * 64,
+                "croma_source_revision": "croma-base-2024-02",
+                "inference_implementation_sha256": "b" * 64,
+                "normalization_profile": "per-image-mean-plus-minus-2std-uint8-v1",
+                "channel_profile": {
+                    "optical": ["B01", "B02"],
+                    "sar": ["VV", "VH"],
+                    "evidence": "source-contract",
+                    "evidence_level": "verified",
+                },
+                "private_path": "/Users/private-owner/models/head.pt",
+            },
+            "checkpoint_sha256": "a" * 64,
+            "head_sha256": "c" * 64,
+            "head_training_mode": "demo_fit_all",
+            "head_evaluation_scope": "training_data_only",
+            "joint_encoder_inputs": {"optical": "optical-1", "SAR": "sar-1"},
+            "fusion": "Both optical and SAR tensors fed the CROMA joint encoder.",
+            "sensor_comparison": {
+                "top_scene_coverage": {
+                    "optical": [{"name": "Inland waters", "estimated_fraction": 0.4}],
+                    "SAR": [{"name": "Inland waters", "estimated_fraction": 0.3}],
+                    "joint": [{"name": "Inland waters", "estimated_fraction": 0.5}],
+                },
+                "interpretation": "Descriptive sensor estimates only.",
+            },
+            "secret": "sk-do-not-persist",
+            "raw_metadata": {"owner": "private-owner"},
+        },
+    )
 
 
 class _Controller:
@@ -88,10 +133,10 @@ class _Controller:
         }
 
 
-def _advanced_zip():
+def _advanced_zip(manifest="{}"):
     stream = io.BytesIO()
     with zipfile.ZipFile(stream, "w") as archive:
-        archive.writestr("request.json", "{}")
+        archive.writestr("request.json", manifest)
     return stream.getvalue()
 
 
@@ -193,6 +238,65 @@ def test_advanced_upload_creates_durable_opaque_report_and_geojson(tmp_path):
     assert (tmp_path / "results" / report["result_id"] / "report.json").is_file()
 
 
+def test_upload_report_preserves_allowlisted_loaded_scene_provenance(tmp_path):
+    app, runtime, _, _ = _app(tmp_path, demo_fit_all=True)
+    runtime.analyze = lambda bundle: [_provenance_scene()]
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/analyze",
+        data={"question": "Describe", "provider": "local"},
+        files={"archive": ("request.zip", _advanced_zip(), "application/zip")},
+    )
+
+    assert response.status_code == 200
+    report = response.json()
+    provenance = report["scene_provenance"][0]
+    assert provenance["checkpoint_sha256"] == "a" * 64
+    assert provenance["head_sha256"] == "c" * 64
+    assert provenance["feature_key"] == "joint_encodings"
+    assert provenance["feature_contract"]["inference_implementation_sha256"] == "b" * 64
+    assert provenance["head_training_mode"] == "demo_fit_all"
+    assert provenance["joint_encoder_inputs"] == {"optical": "optical-1", "SAR": "sar-1"}
+    assert provenance["sensor_comparison"]["top_scene_coverage"]["joint"][0] == {
+        "name": "Inland waters",
+        "estimated_fraction": 0.5,
+    }
+    assert report["training_disclosure"] == {
+        "head_training_modes": ["demo_fit_all"],
+        "contains_demo_fit_all": True,
+        "manual_demo_fit_all_label": False,
+    }
+    downloaded = client.get(report["downloads"]["report"]).json()
+    assert downloaded["scene_provenance"] == report["scene_provenance"]
+    serialized = json.dumps(report)
+    assert "/Users/" not in serialized
+    assert "sk-do-not-persist" not in serialized
+    assert "raw_metadata" not in serialized
+
+
+def test_cached_demo_disclosure_comes_from_loaded_head_provenance(tmp_path):
+    app, runtime, _, _ = _app(tmp_path, demo=True, demo_fit_all=False)
+    runtime.analyze_cached = lambda *args, **kwargs: _provenance_scene(source="cached_features")
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/demo",
+        data={"question": "Describe", "provider": "local", "index": "0"},
+    )
+
+    assert response.status_code == 200
+    report = response.json()
+    assert report["training_disclosure"]["contains_demo_fit_all"] is True
+    assert report["training_disclosure"]["manual_demo_fit_all_label"] is False
+    assert report["input_summary"]["head_training_modes"] == ["demo_fit_all"]
+    assert report["input_summary"]["demo_fit_all"] is True
+    assert (
+        client.get(report["downloads"]["report"]).json()["scene_provenance"]
+        == report["scene_provenance"]
+    )
+
+
 def test_result_download_rejects_paths_and_unknown_identifiers(tmp_path):
     app, _, _, _ = _app(tmp_path)
     client = TestClient(app)
@@ -223,6 +327,108 @@ def test_api_rejects_cross_origin_and_oversized_requests_before_processing(tmp_p
     assert cross_origin.status_code == 403
     assert "access-control-allow-origin" not in cross_origin.headers
     assert too_large.status_code == 413
+    assert runtime.bundles == []
+
+
+def test_chunked_multipart_aggregate_limit_rejects_before_form_parse_and_closes_spool(
+    tmp_path, monkeypatch
+):
+    import satquery.assistant.web as web_module
+
+    created_spools = []
+    original_spool = tempfile.SpooledTemporaryFile
+
+    def tracked_spool(*args, **kwargs):
+        spool = original_spool(*args, **kwargs)
+        created_spools.append(spool)
+        return spool
+
+    monkeypatch.setattr(tempfile, "tempdir", str(tmp_path))
+    monkeypatch.setattr(web_module.tempfile, "SpooledTemporaryFile", tracked_spool)
+    form_calls = []
+    original_form = web_module.Request.form
+
+    async def tracked_form(request, *args, **kwargs):
+        form_calls.append(request)
+        return await original_form(request, *args, **kwargs)
+
+    monkeypatch.setattr(web_module.Request, "form", tracked_form)
+    app, runtime, _, _ = _app(tmp_path)
+    app.state.request_size_limit = 512
+    app.state.request_spool_memory_size = 64
+    client = TestClient(app)
+    boundary = "satquery-stream-boundary"
+    body = (
+        (
+            f"--{boundary}\r\n"
+            'Content-Disposition: form-data; name="question"\r\n\r\n'
+            "Describe\r\n"
+            f"--{boundary}\r\n"
+            'Content-Disposition: form-data; name="archive"; filename="request.zip"\r\n'
+            "Content-Type: application/zip\r\n\r\n"
+        ).encode()
+        + b"x" * 1024
+        + f"\r\n--{boundary}--\r\n".encode()
+    )
+
+    def chunks():
+        for start in range(0, len(body), 73):
+            yield body[start : start + 73]
+
+    request = client.build_request(
+        "POST",
+        "/api/analyze",
+        headers={"Content-Type": f"multipart/form-data; boundary={boundary}"},
+        content=chunks(),
+    )
+    assert "content-length" not in request.headers
+    assert request.headers["transfer-encoding"] == "chunked"
+    response = client.send(request)
+
+    assert response.status_code == 413
+    assert response.json() == {"detail": "request is too large"}
+    assert runtime.bundles == []
+    assert form_calls == []
+    assert created_spools and all(spool.closed for spool in created_spools)
+    assert not list(tmp_path.rglob("satquery-body-*"))
+
+
+def test_manifest_loader_type_error_is_sanitized_422(tmp_path):
+    from satquery.assistant.inputs import load_bundle
+
+    app, runtime, _, _ = _app(tmp_path, loader=load_bundle)
+    response = TestClient(app).post(
+        "/api/analyze",
+        data={"question": "Describe", "provider": "local"},
+        files={
+            "archive": (
+                "request.zip",
+                _advanced_zip('{"schema_version":1,"observations":[1]}'),
+                "application/zip",
+            )
+        },
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == "observation 0: expected an object"
+    assert runtime.bundles == []
+
+
+def test_manifest_loader_value_error_is_sanitized_422(tmp_path):
+    error = ValueError("bad grid")
+
+    def malformed_loader(path, destination):
+        raise error
+
+    app, runtime, _, _ = _app(tmp_path, loader=malformed_loader)
+    response = TestClient(app).post(
+        "/api/analyze",
+        data={"question": "Describe", "provider": "local"},
+        files={"archive": ("request.zip", _advanced_zip(), "application/zip")},
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == str(error)
     assert runtime.bundles == []
 
 

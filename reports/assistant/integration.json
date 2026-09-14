@@ -1,7 +1,7 @@
 {
   "format_version": 1,
   "status": "passed_with_explicit_open_gaps",
-  "verified_on": "2026-09-14",
+  "verified_on": "2026-09-15",
   "integration_base_commit": "a6387134eb1f039c21020819457281427d3ee90d",
   "baseline": {
     "commit": "65a4514522ada18b0ee725f67cf34c657018e151",
@@ -106,6 +106,18 @@
       "geojson_feature_count": 76,
       "preview_content_type": "image/png"
     },
+    "report_provenance": {
+      "ordinary_upload_and_cached_demo_preserved": true,
+      "allowlisted_fields": ["checkpoint_sha256", "head_sha256", "feature_key", "feature_contract", "head_training_mode", "joint_encoder_inputs", "fusion", "sensor_comparison"],
+      "training_mode_derived_from_loaded_scene": true,
+      "local_paths_secrets_and_raw_metadata_omitted": true
+    },
+    "aggregate_request_limit": {
+      "content_length_checked": true,
+      "chunked_actual_bytes_checked_before_multipart_parse": true,
+      "oversized_status": 413,
+      "temporary_spool_closed": true
+    },
     "unsupported_object_request": {
       "status_code": 200,
       "abstained": true,
@@ -156,15 +168,17 @@
     "preview_note": "real input-derived preview verified through the production HTTP route and a configured cached demo preview"
   },
   "packaging": {
-    "lockfile_assistant_dependencies": ["fastapi", "httpx", "openai", "pillow", "python-multipart", "uvicorn"],
+    "lockfile_assistant_dependencies": ["einops", "fastapi", "httpx", "openai", "pillow", "python-multipart", "uvicorn"],
     "wheel_built": true,
     "wheel_assistant_modules_imported": 7,
     "wheel_entry_point": "satquery-serve = satquery.assistant.web:main",
-    "wheel_assistant_extra_complete": true
+    "wheel_assistant_extra_complete": true,
+    "wheel_assistant_einops_requirement": "einops>=0.8; extra == 'assistant'",
+    "wheel_croma_runtime_imported": true
   },
   "verification": {
-    "focused_assistant_tests": {"passed": 96, "warnings": 4},
-    "full_suite": {"passed": 213, "skipped": 5, "warnings": 48},
+    "focused_assistant_tests": {"passed": 101, "warnings": 4},
+    "full_suite": {"passed": 218, "skipped": 5, "warnings": 48},
     "ruff_lint": "passed for src, tests, and adaptation driver",
     "task_owned_format_check": "passed",
     "repository_format_check": "six pre-existing unrelated files require formatting; unchanged by this milestone",

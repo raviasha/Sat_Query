@@ -295,8 +295,9 @@ paths, and model-authored answer text is discarded. The local tool produces the 
 measurements and answer. Authentication/rate-limit/timeout failures are sanitized and surfaced;
 there is no silent provider fallback.
 
-`create_app` injects runtime/controller dependencies, serializes heavy inference, bounds multipart
-requests, uses opaque result IDs, cleans temporary uploads, and persists only safe report/GeoJSON/
+`create_app` injects runtime/controller dependencies, serializes heavy inference, spools and bounds
+the aggregate request body before multipart parsing, preserves a bounded allowlist of loaded-scene
+provenance, uses opaque result IDs, cleans temporary uploads, and persists only safe report/GeoJSON/
 preview artifacts under the configured output directory. It exposes status, advanced ZIP,
 guided TIFF, cached demo, and result-download routes. The browser renders untrusted values through
 `textContent`, shows capabilities/provider/demo status, a clickable evidence grid, trace,

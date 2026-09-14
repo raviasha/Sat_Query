@@ -20,7 +20,7 @@ Read the [assistant guide](docs/assistant.md) to launch and use the application,
 
 ## Current capabilities
 
-Status: **14 September 2026**. The recorded 1,000-area experiment ran on 9 September.
+Status: **15 September 2026**. The recorded 1,000-area experiment ran on 9 September.
 
 | Functionality | Status | Implementation |
 |---|---|---|
@@ -137,9 +137,10 @@ uv run --no-sync satquery-serve \
 Open `http://127.0.0.1:8000`. The server binds to localhost by default. Configure only the heads
 you have; the status strip reports the resulting capabilities. Add `--demo-features`,
 `--demo-capability`, and `--demo-fit-all` only for an explicitly labelled cached-feature demo.
-The demo flag does not turn fit-on-demo artifacts into held-out evidence. See
-[docs/assistant.md](docs/assistant.md) for exact TIFF/ZIP contracts, questions, output downloads,
-OpenAI behavior, adaptation commands, and the SIH26167 status matrix.
+The flag is a manual corroborating label; each result report derives its authoritative training
+mode from the loaded head provenance. The flag does not turn fit-on-demo artifacts into held-out
+evidence. See [docs/assistant.md](docs/assistant.md) for exact TIFF/ZIP contracts, questions, output
+downloads, OpenAI behavior, adaptation commands, and the SIH26167 status matrix.
 
 ### Download and extract
 
@@ -262,6 +263,7 @@ and revalidated when loaded.
 PYTHONPATH=src python scripts/colab_adapt_text.py --edu-p /persistent/SatQuery prepare \
   --annotations /persistent/SatQuery/annotations/matched \
   --features /persistent/SatQuery/features \
+  --splits train,validation,test \
   --name text-pairs
 
 PYTHONPATH=src python scripts/colab_adapt_text.py --edu-p /persistent/SatQuery train \
@@ -274,9 +276,11 @@ PYTHONPATH=src python scripts/colab_adapt_text.py --edu-p /persistent/SatQuery e
   --name retrieval-test.json --split test
 ```
 
-Preparation needs a valid server/environment OpenAI key. Similarity values are cosine similarities,
-not calibrated confidence. No successful real BigEarthNet.txt adapter training is recorded yet.
-The workflow does not generate captions or answer open-ended questions.
+Preparation needs a valid server/environment OpenAI key. The command explicitly prepares test
+records because the final command reports the test split. Training still uses only train records,
+validation alone selects the checkpoint, and test remains report-only. Similarity values are cosine
+similarities, not calibrated confidence. No successful real BigEarthNet.txt adapter training is
+recorded yet. The workflow does not generate captions or answer open-ended questions.
 
 Task-level JSONL evaluation is separate from coverage MAE:
 
