@@ -313,3 +313,44 @@ Results: Ruff clean; `25 passed` focused; `142 passed, 5 skipped` repository-wid
 in 8.69 seconds. The wheel built successfully, imported the packaged adaptation
 module after extraction, and its metadata contains both `Provides-Extra:
 assistant` and `Requires-Dist: openai>=1.68; extra == 'assistant'`.
+
+## Review round 2 fixes
+
+Recursive provenance validation now rejects normalized credential keys named or
+ending in common secret-bearing forms, including `token`, `private_key`,
+`bearer`, `api_key`, `authorization`, `password`, `secret`, and `credential`.
+This applies at every nested mapping depth. Exact `auth` is also rejected, while
+ordinary metadata such as `authentication`, `token_count`, and
+`private_key_source` remains accepted.
+
+Regression-first red command:
+
+```bash
+/tmp/satquery-nonlinear-env/bin/python -m pytest \
+  tests/test_text_adaptation.py::test_embedding_provenance_rejects_common_nested_credential_keys -q
+```
+
+Red result before the fix: `3 failed` because nested `token`, `private_key`, and
+`bearer` fields were accepted.
+
+Targeted green command:
+
+```bash
+/tmp/satquery-nonlinear-env/bin/python -m pytest \
+  tests/test_text_adaptation.py::test_embedding_provenance_rejects_common_nested_credential_keys \
+  tests/test_text_adaptation.py::test_embedding_provenance_allows_nonsecret_authentication_metadata -q
+```
+
+Green result: `4 passed in 1.29s`.
+
+Final review-round verification:
+
+```bash
+/tmp/satquery-nonlinear-env/bin/python -m pytest \
+  tests/test_text_adaptation.py tests/test_task_evaluation.py -q
+/tmp/satquery-nonlinear-env/bin/python -m ruff check \
+  src/satquery/assistant/text_adaptation.py tests/test_text_adaptation.py
+```
+
+Results: `29 passed in 3.81s`; Ruff reported `All checks passed!`. No live
+OpenAI request or real adaptation training was performed in this review round.

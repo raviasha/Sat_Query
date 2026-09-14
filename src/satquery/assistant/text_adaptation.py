@@ -73,15 +73,35 @@ def _safe_provenance(value: Mapping[str, object] | None) -> dict:
         or not value["kind"].strip()
     ):
         raise TypeError("Embedding provenance with a nonempty kind is required")
-    credential_names = (
-        "api_key",
+    credential_names = {
         "apikey",
-        "access_token",
-        "auth_token",
-        "secret",
-        "password",
-        "credential",
+        "auth",
         "authorization",
+        "bearer",
+        "credential",
+        "credentials",
+        "password",
+        "passwd",
+        "privatekey",
+        "secret",
+        "token",
+    }
+    credential_suffixes = (
+        "apikey",
+        "authheader",
+        "authorization",
+        "basicauth",
+        "bearer",
+        "bearerheader",
+        "credential",
+        "credentials",
+        "password",
+        "passwd",
+        "privatekey",
+        "privatekeymaterial",
+        "privatekeypem",
+        "secret",
+        "token",
     )
     item_count = 0
 
@@ -99,7 +119,9 @@ def _safe_provenance(value: Mapping[str, object] | None) -> dict:
                 normalized = "".join(
                     character for character in key.casefold() if character.isalnum()
                 )
-                if any(name.replace("_", "") in normalized for name in credential_names):
+                if normalized in credential_names or any(
+                    normalized.endswith(suffix) for suffix in credential_suffixes
+                ):
                     raise ValueError("Embedding provenance must not contain credentials")
                 validate(child, depth + 1)
         elif isinstance(item, list):
