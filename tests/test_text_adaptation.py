@@ -388,6 +388,27 @@ def test_embedding_provenance_rejects_common_nested_credential_keys(tmp_path, cr
         )
 
 
+@pytest.mark.parametrize(
+    "credential_key",
+    ["access_token_value", "authorization_header", "private_key_value", "bearer_value"],
+)
+def test_embedding_provenance_rejects_credential_components_anywhere(tmp_path, credential_key):
+    from satquery.assistant.text_adaptation import prepare_text_pairs
+
+    with pytest.raises(ValueError, match="credentials"):
+        prepare_text_pairs(
+            _annotation_artifact(tmp_path),
+            _feature_artifact(tmp_path),
+            tmp_path / "bad-provenance",
+            requested_splits=("train",),
+            embedder=RecordingEmbedder(),
+            embedding_provenance={
+                "kind": "caller_supplied",
+                "details": {credential_key: "must-not-persist"},
+            },
+        )
+
+
 def test_embedding_provenance_allows_nonsecret_authentication_metadata(tmp_path):
     from satquery.assistant.text_adaptation import prepare_text_pairs
 

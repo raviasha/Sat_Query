@@ -354,3 +354,51 @@ Final review-round verification:
 
 Results: `29 passed in 3.81s`; Ruff reported `All checks passed!`. No live
 OpenAI request or real adaptation training was performed in this review round.
+
+## Review round 3 fixes
+
+Provenance credential detection now splits mapping keys into normalized
+components across punctuation and camel-case boundaries. It rejects
+secret-bearing components such as `token`, `authorization`, `bearer`, `secret`,
+`password`, `credential`, and `auth` wherever they occur, plus adjacent `api key`
+and `private key` components. A normalized exact allowlist is limited to the
+known safe metadata keys `token_count`, `private_key_source`, and
+`authentication`.
+
+Regression-first red command:
+
+```bash
+/tmp/satquery-nonlinear-env/bin/python -m pytest \
+  tests/test_text_adaptation.py::test_embedding_provenance_rejects_credential_components_anywhere -q
+```
+
+Red result before the fix: `4 failed` because nested `access_token_value`,
+`authorization_header`, `private_key_value`, and `bearer_value` fields were
+accepted.
+
+Targeted green command:
+
+```bash
+/tmp/satquery-nonlinear-env/bin/python -m pytest \
+  tests/test_text_adaptation.py::test_embedding_provenance_rejects_credential_components_anywhere \
+  tests/test_text_adaptation.py::test_embedding_provenance_rejects_common_nested_credential_keys \
+  tests/test_text_adaptation.py::test_embedding_provenance_allows_nonsecret_authentication_metadata -q
+```
+
+Green result: `8 passed in 1.08s`, covering the four bypasses, the earlier three
+credential keys, and all three explicit safe metadata examples.
+
+Final review-round verification:
+
+```bash
+/tmp/satquery-nonlinear-env/bin/python -m pytest \
+  tests/test_text_adaptation.py tests/test_task_evaluation.py -q
+/tmp/satquery-nonlinear-env/bin/python -m ruff format --check \
+  src/satquery/assistant/text_adaptation.py tests/test_text_adaptation.py
+/tmp/satquery-nonlinear-env/bin/python -m ruff check \
+  src/satquery/assistant/text_adaptation.py tests/test_text_adaptation.py
+```
+
+Results: `33 passed in 4.19s`; Ruff format reported `2 files already formatted`
+and Ruff lint reported `All checks passed!`. No live OpenAI request or real
+adaptation training was performed in this review round.

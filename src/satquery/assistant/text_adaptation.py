@@ -12,10 +12,12 @@ import copy
 import hashlib
 import json
 import math
+import re
 import tempfile
 from collections import Counter
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
+from itertools import pairwise
 from pathlib import Path
 
 import pandas as pd
@@ -73,7 +75,12 @@ def _safe_provenance(value: Mapping[str, object] | None) -> dict:
         or not value["kind"].strip()
     ):
         raise TypeError("Embedding provenance with a nonempty kind is required")
-    credential_names = {
+    safe_metadata_names = {
+        "authentication",
+        "privatekeysource",
+        "tokencount",
+    }
+    credential_components = {
         "apikey",
         "auth",
         "authorization",
@@ -86,24 +93,26 @@ def _safe_provenance(value: Mapping[str, object] | None) -> dict:
         "secret",
         "token",
     }
-    credential_suffixes = (
-        "apikey",
-        "authheader",
-        "authorization",
-        "basicauth",
-        "bearer",
-        "bearerheader",
-        "credential",
-        "credentials",
-        "password",
-        "passwd",
-        "privatekey",
-        "privatekeymaterial",
-        "privatekeypem",
-        "secret",
-        "token",
-    )
     item_count = 0
+
+    def key_components(key: str) -> tuple[str, ...]:
+        separated_acronyms = re.sub(r"([A-Z]+)([A-Z][a-z])", r"\1_\2", key)
+        separated_words = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", separated_acronyms)
+        return tuple(
+            component.casefold() for component in re.findall(r"[A-Za-z0-9]+", separated_words)
+        )
+
+    def is_credential_key(key: str) -> bool:
+        normalized = "".join(character for character in key.casefold() if character.isalnum())
+        if normalized in safe_metadata_names:
+            return False
+        components = key_components(key)
+        if any(component in credential_components for component in components):
+            return True
+        return any(
+            first in {"api", "private"} and second == "key"
+            for first, second in pairwise(components)
+        )
 
     def validate(item: object, depth: int) -> None:
         nonlocal item_count
@@ -116,12 +125,7 @@ def _safe_provenance(value: Mapping[str, object] | None) -> dict:
             for key, child in item.items():
                 if not isinstance(key, str):
                     raise TypeError("Embedding provenance object keys must be strings")
-                normalized = "".join(
-                    character for character in key.casefold() if character.isalnum()
-                )
-                if normalized in credential_names or any(
-                    normalized.endswith(suffix) for suffix in credential_suffixes
-                ):
+                if is_credential_key(key):
                     raise ValueError("Embedding provenance must not contain credentials")
                 validate(child, depth + 1)
         elif isinstance(item, list):
