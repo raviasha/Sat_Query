@@ -12,6 +12,7 @@ from collections.abc import Sequence
 from pathlib import Path
 
 REQUIRED_FIELDS = {"id", "dataset", "split", "task", "answer", "abstention"}
+SUPPORTED_TASKS = frozenset({"vqa", "area", "change"})
 
 
 def _read_jsonl(path: str | Path, label: str) -> list[dict]:
@@ -28,6 +29,11 @@ def _read_jsonl(path: str | Path, label: str) -> list[dict]:
         for field in ("id", "dataset", "split", "task"):
             if not isinstance(record[field], str) or not record[field].strip():
                 raise ValueError(f"Invalid {label} {field} at line {number}")
+        if record["task"] not in SUPPORTED_TASKS:
+            raise ValueError(
+                f"Unsupported task at {label} line {number}: {record['task']!r}; "
+                f"expected one of {sorted(SUPPORTED_TASKS)}"
+            )
         if not isinstance(record["abstention"], bool):
             raise TypeError(f"Invalid {label} abstention at line {number}")
         if record["abstention"] and record["answer"] is not None:
@@ -156,6 +162,7 @@ def evaluate_task_records(references: str | Path, predictions: str | Path) -> di
     total = len(reference_records)
     report = {
         "format_version": 1,
+        "supported_tasks": sorted(SUPPORTED_TASKS),
         "matching": {
             "reference_count": total,
             "prediction_count": len(prediction_records),

@@ -1,3 +1,4 @@
+import builtins
 import hashlib
 import json
 import os
@@ -27,6 +28,23 @@ def _refresh_annotation_hash(root):
     report = json.loads(report_path.read_text())
     report["files"] = {"annotations.parquet": _sha256(root / "annotations.parquet")}
     _write_json(report_path, report)
+
+
+def _semantic_digest(manifest):
+    payload = {
+        "feature_key": manifest["feature_key"],
+        "requested_splits": manifest["requested_splits"],
+        "image_records": manifest["image_records"],
+        "caption_records": manifest["caption_records"],
+    }
+    raw = json.dumps(
+        payload,
+        sort_keys=True,
+        ensure_ascii=False,
+        allow_nan=False,
+        separators=(",", ":"),
+    ).encode()
+    return hashlib.sha256(raw).hexdigest()
 
 
 def _feature_artifact(tmp_path):
@@ -330,6 +348,28 @@ def test_embedding_cache_rejects_provenance_change_on_resume(tmp_path):
         )
 
 
+@pytest.mark.parametrize(
+    "provenance",
+    [
+        {"kind": "synthetic", "details": {"api_key": "must-not-persist"}},
+        {"kind": "  "},
+        {"kind": "synthetic", "details": "x" * 5000},
+    ],
+)
+def test_embedding_provenance_is_recursive_nonempty_and_bounded(tmp_path, provenance):
+    from satquery.assistant.text_adaptation import prepare_text_pairs
+
+    with pytest.raises((TypeError, ValueError), match="provenance|credentials|bounded|kind"):
+        prepare_text_pairs(
+            _annotation_artifact(tmp_path),
+            _feature_artifact(tmp_path),
+            tmp_path / "bad-provenance",
+            requested_splits=("train",),
+            embedder=RecordingEmbedder(),
+            embedding_provenance=provenance,
+        )
+
+
 def test_prepare_rejects_identity_mismatch_and_unverified_source(tmp_path):
     from satquery.assistant.text_adaptation import prepare_text_pairs
 
@@ -506,6 +546,76 @@ def test_training_updates_saves_best_and_keeps_heldout_answers_out_of_checkpoint
     assert all(hit["score_kind"] == "cosine_similarity_not_calibrated_confidence" for hit in hits)
     with pytest.raises(FileExistsError):
         train_text_adapter(pairs_dir, tmp_path / "model", epochs=1)
+
+
+def test_prepared_manifest_cannot_relabel_heldout_records_as_training(tmp_path):
+    from satquery.assistant.text_adaptation import load_prepared_pairs, prepare_text_pairs
+
+    pairs_dir = tmp_path / "pairs"
+    prepare_text_pairs(
+        _annotation_artifact(tmp_path),
+        _feature_artifact(tmp_path),
+        pairs_dir,
+        requested_splits=("train", "validation", "test"),
+        embedder=RecordingEmbedder(),
+        embedding_provenance={"kind": "synthetic"},
+    )
+    manifest_path = pairs_dir / "manifest.json"
+    manifest = json.loads(manifest_path.read_text())
+    test_image = next(record for record in manifest["image_records"] if record["patch_id"] == "p3")
+    test_image["split"] = "train"
+    test_caption = next(
+        record for record in manifest["caption_records"] if record["patch_id"] == "p3"
+    )
+    test_caption.update(split="train", use_partition="train", training_eligible=True)
+    _write_json(manifest_path, manifest)
+    with pytest.raises(ValueError, match="semantic|split|eligibility"):
+        load_prepared_pairs(pairs_dir)
+
+
+def test_prepared_loader_rejects_internally_bound_invalid_split_relationship(tmp_path):
+    from satquery.assistant.text_adaptation import load_prepared_pairs, prepare_text_pairs
+
+    pairs_dir = tmp_path / "pairs"
+    prepare_text_pairs(
+        _annotation_artifact(tmp_path),
+        _feature_artifact(tmp_path),
+        pairs_dir,
+        requested_splits=("train", "validation", "test"),
+        embedder=RecordingEmbedder(),
+        embedding_provenance={"kind": "synthetic"},
+    )
+    manifest_path = pairs_dir / "manifest.json"
+    manifest = json.loads(manifest_path.read_text())
+    test_caption = next(
+        record for record in manifest["caption_records"] if record["patch_id"] == "p3"
+    )
+    test_caption.update(split="train", use_partition="train", training_eligible=True)
+    semantic_digest = _semantic_digest(manifest)
+    manifest["semantic_records_sha256"] = semantic_digest
+    pair_path = pairs_dir / "pairs.pt"
+    tensors = torch.load(pair_path, map_location="cpu", weights_only=True)
+    tensors["semantic_records_sha256"] = semantic_digest
+    torch.save(tensors, pair_path)
+    manifest["pairs_sha256"] = _sha256(pair_path)
+    _write_json(manifest_path, manifest)
+    with pytest.raises(ValueError, match="split|eligibility"):
+        load_prepared_pairs(pairs_dir)
+
+
+def test_missing_openai_extra_has_actionable_error(monkeypatch):
+    from satquery.assistant.text_adaptation import OpenAIEmbedder
+
+    original_import = builtins.__import__
+
+    def missing_openai(name, *args, **kwargs):
+        if name == "openai":
+            raise ModuleNotFoundError("No module named 'openai'")
+        return original_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", missing_openai)
+    with pytest.raises(RuntimeError, match=r"\[assistant\]"):
+        OpenAIEmbedder()
 
 
 def test_heldout_retrieval_evaluation_reports_candidate_set_without_promoting(tmp_path):

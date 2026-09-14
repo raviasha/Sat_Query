@@ -177,6 +177,24 @@ def test_rejects_cross_split_id_leakage_and_implicit_area_units(tmp_path):
         evaluate_task_records(rp, pp)
 
 
+def test_rejects_unknown_task_instead_of_silently_leaving_it_unscored(tmp_path):
+    from satquery.assistant.task_evaluation import evaluate_task_records
+
+    record = {
+        "id": "q1",
+        "dataset": "RSVQA",
+        "split": "test",
+        "task": "vqaa",
+        "answer": "forest",
+        "abstention": False,
+    }
+    rp, pp = tmp_path / "r.jsonl", tmp_path / "p.jsonl"
+    _jsonl(rp, [record])
+    _jsonl(pp, [record])
+    with pytest.raises(ValueError, match="Unsupported task"):
+        evaluate_task_records(rp, pp)
+
+
 def test_benchmark_compatibility_manifest_is_candid_about_gaps():
     from satquery.assistant.task_evaluation import benchmark_compatibility_manifest
 

@@ -241,3 +241,75 @@ The build succeeded, and archive inspection found both
 - VQA exact match is intentionally provisional and is not an official dataset
   scorer. Retrieval evaluation measures only the explicit candidate set supplied
   in the prepared artifact.
+
+## Review round 1 fixes
+
+The prepared artifact now stores a canonical SHA-256 digest of `feature_key`,
+`requested_splits`, `image_records`, and `caption_records` inside `pairs.pt` and
+in the manifest. Loading recomputes and compares both digests before using any
+record. It then independently validates unique image identities/source indices,
+allowed requested splits, caption-to-image ownership, matching optical/SAR IDs,
+matching source feature indices, annotation-ID uniqueness, and the exact rule
+that only train captions have `training_eligible=true` and `use_partition=train`.
+
+Embedding provenance validation now walks nested objects/lists, rejects
+credential-like keys at every depth, requires a nonblank `kind`, accepts only
+finite JSON-safe values, and enforces depth/item/string/serialized-size bounds.
+Task evaluation accepts only the fixed `area`, `change`, and `vqa` task names and
+reports that enum. The optional `assistant` dependency extra now declares
+`openai>=1.68`; `OpenAIEmbedder` gives an actionable
+`satquery-preprocessing[assistant]` installation error when absent. `uv.lock` was
+refreshed without installing OpenAI into the base preprocessing dependency set.
+
+Regression-first red command:
+
+```bash
+/tmp/satquery-nonlinear-env/bin/python -m pytest \
+  tests/test_text_adaptation.py::test_prepared_manifest_cannot_relabel_heldout_records_as_training \
+  tests/test_text_adaptation.py::test_embedding_provenance_is_recursive_nonempty_and_bounded \
+  tests/test_text_adaptation.py::test_missing_openai_extra_has_actionable_error \
+  tests/test_task_evaluation.py::test_rejects_unknown_task_instead_of_silently_leaving_it_unscored -q
+```
+
+Red result before fixes: `6 failed` (held-out relabel accepted; all three invalid
+provenance cases accepted; raw `ModuleNotFoundError`; unknown task accepted).
+
+The independent semantic-relationship validator was mutation-checked by
+temporarily removing its load-time call and running:
+
+```bash
+/tmp/satquery-nonlinear-env/bin/python -m pytest \
+  tests/test_text_adaptation.py::test_prepared_loader_rejects_internally_bound_invalid_split_relationship -q
+```
+
+Red result: `1 failed` because an internally digested test caption relabeled as
+train was accepted. Restoring the validator produced `1 passed`.
+
+Focused green checks during the fixes:
+
+- Semantic digest plus held-out relationship guards: `3 passed`, then the two
+  dedicated relabel regressions: `2 passed`.
+- Recursive/bounded provenance and cache provenance: `5 passed`.
+- Fixed task enum plus existing evaluation behavior: `2 passed`.
+- Missing OpenAI extra error: `1 passed`.
+
+No live OpenAI request or real adaptation training was performed in this review
+round.
+
+Final review-round verification:
+
+```bash
+/tmp/satquery-nonlinear-env/bin/python -m ruff check \
+  src/satquery/assistant/text_adaptation.py \
+  src/satquery/assistant/task_evaluation.py scripts/colab_adapt_text.py \
+  tests/test_text_adaptation.py tests/test_task_evaluation.py
+/tmp/satquery-nonlinear-env/bin/python -m pytest \
+  tests/test_text_adaptation.py tests/test_task_evaluation.py -q
+/tmp/satquery-nonlinear-env/bin/python -m pytest -q
+uv build --wheel --out-dir /tmp/satquery-task3-round1-wheel-20260914
+```
+
+Results: Ruff clean; `25 passed` focused; `142 passed, 5 skipped` repository-wide
+in 8.69 seconds. The wheel built successfully, imported the packaged adaptation
+module after extraction, and its metadata contains both `Provides-Extra:
+assistant` and `Requires-Dist: openai>=1.68; extra == 'assistant'`.

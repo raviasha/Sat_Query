@@ -40,6 +40,26 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _canonical_sha256(value: object) -> str:
+    raw = json.dumps(
+        value,
+        sort_keys=True,
+        ensure_ascii=False,
+        allow_nan=False,
+        separators=(",", ":"),
+    ).encode()
+    return hashlib.sha256(raw).hexdigest()
+
+
+def _semantic_record_payload(manifest: Mapping[str, object]) -> dict:
+    return {
+        "feature_key": manifest.get("feature_key"),
+        "requested_splits": manifest.get("requested_splits"),
+        "image_records": manifest.get("image_records"),
+        "caption_records": manifest.get("caption_records"),
+    }
+
+
 def _write_json_exclusive(path: Path, value: object) -> None:
     serialized = json.dumps(value, indent=2, ensure_ascii=False, allow_nan=False) + "\n"
     with path.open("x") as stream:
@@ -47,13 +67,61 @@ def _write_json_exclusive(path: Path, value: object) -> None:
 
 
 def _safe_provenance(value: Mapping[str, object] | None) -> dict:
-    if not isinstance(value, Mapping) or not isinstance(value.get("kind"), str):
-        raise TypeError("Embedding provenance with a nonempty kind is required")
-    serialized = json.loads(json.dumps(dict(value), allow_nan=False))
-    if any(
-        any(part in key.casefold() for part in ("key", "token", "secret")) for key in serialized
+    if (
+        not isinstance(value, Mapping)
+        or not isinstance(value.get("kind"), str)
+        or not value["kind"].strip()
     ):
-        raise ValueError("Embedding provenance must not contain credentials")
+        raise TypeError("Embedding provenance with a nonempty kind is required")
+    credential_names = (
+        "api_key",
+        "apikey",
+        "access_token",
+        "auth_token",
+        "secret",
+        "password",
+        "credential",
+        "authorization",
+    )
+    item_count = 0
+
+    def validate(item: object, depth: int) -> None:
+        nonlocal item_count
+        item_count += 1
+        if item_count > 64 or depth > 6:
+            raise ValueError("Embedding provenance must be bounded")
+        if isinstance(item, Mapping):
+            if len(item) > 32:
+                raise ValueError("Embedding provenance must be bounded")
+            for key, child in item.items():
+                if not isinstance(key, str):
+                    raise TypeError("Embedding provenance object keys must be strings")
+                normalized = "".join(
+                    character for character in key.casefold() if character.isalnum()
+                )
+                if any(name.replace("_", "") in normalized for name in credential_names):
+                    raise ValueError("Embedding provenance must not contain credentials")
+                validate(child, depth + 1)
+        elif isinstance(item, list):
+            if len(item) > 32:
+                raise ValueError("Embedding provenance must be bounded")
+            for child in item:
+                validate(child, depth + 1)
+        elif isinstance(item, str):
+            if len(item) > 1024:
+                raise ValueError("Embedding provenance must be bounded")
+        elif isinstance(item, float):
+            if not math.isfinite(item):
+                raise ValueError("Embedding provenance must be JSON-safe")
+        elif item is not None and not isinstance(item, (bool, int)):
+            raise TypeError("Embedding provenance must contain JSON-safe values")
+
+    validate(value, 0)
+    encoded = json.dumps(dict(value), ensure_ascii=False, allow_nan=False, separators=(",", ":"))
+    if len(encoded.encode()) > 4096:
+        raise ValueError("Embedding provenance must be bounded")
+    serialized = json.loads(encoded)
+    serialized["kind"] = serialized["kind"].strip()
     return serialized
 
 
@@ -375,6 +443,13 @@ def prepare_text_pairs(
     caption_image_indices = torch.tensor(
         [compact_index[record["source_feature_index"]] for record in selected], dtype=torch.int64
     )
+    semantic_payload = {
+        "feature_key": feature_key,
+        "requested_splits": list(splits),
+        "image_records": image_records,
+        "caption_records": selected,
+    }
+    semantic_records_sha256 = _canonical_sha256(semantic_payload)
     tensor_path = output / "pairs.pt"
     with tempfile.NamedTemporaryFile(dir=output, prefix=".pairs-", delete=False) as stream:
         temporary = Path(stream.name)
@@ -385,6 +460,7 @@ def prepare_text_pairs(
                     "image_features": image_features,
                     "caption_embeddings": embeddings,
                     "caption_image_indices": caption_image_indices,
+                    "semantic_records_sha256": semantic_records_sha256,
                 },
                 stream,
             )
@@ -434,6 +510,7 @@ def prepare_text_pairs(
         "feature_contract": feature_reader.contract,
         "image_records": image_records,
         "caption_records": selected,
+        "semantic_records_sha256": semantic_records_sha256,
         "tensor_shapes": {
             "image_features": list(image_features.shape),
             "caption_embeddings": list(embeddings.shape),
@@ -464,6 +541,12 @@ def load_prepared_pairs(root: str | Path) -> PreparedTextPairs:
     image_features = values["image_features"]
     caption_embeddings = values["caption_embeddings"]
     caption_indices = values["caption_image_indices"]
+    semantic_records_sha256 = _canonical_sha256(_semantic_record_payload(manifest))
+    if (
+        manifest.get("semantic_records_sha256") != semantic_records_sha256
+        or values.get("semantic_records_sha256") != semantic_records_sha256
+    ):
+        raise ValueError("Prepared text-pair semantic record digest mismatch")
     if (
         tuple(image_features.shape) != tuple(manifest["tensor_shapes"]["image_features"])
         or tuple(caption_embeddings.shape) != tuple(manifest["tensor_shapes"]["caption_embeddings"])
@@ -477,6 +560,9 @@ def load_prepared_pairs(root: str | Path) -> PreparedTextPairs:
         or caption_indices.max().item() >= len(image_features)
     ):
         raise ValueError("Invalid prepared text-pair tensors")
+    _validate_prepared_semantics(
+        manifest, caption_indices, len(image_features), len(caption_embeddings)
+    )
     return PreparedTextPairs(
         image_features=image_features.detach(),
         caption_embeddings=caption_embeddings.detach(),
@@ -485,6 +571,68 @@ def load_prepared_pairs(root: str | Path) -> PreparedTextPairs:
         caption_records=tuple(manifest["caption_records"]),
         manifest=manifest,
     )
+
+
+def _validate_prepared_semantics(
+    manifest: Mapping[str, object],
+    caption_indices: torch.Tensor,
+    image_count: int,
+    caption_count: int,
+) -> None:
+    requested_splits = manifest.get("requested_splits")
+    images = manifest.get("image_records")
+    captions = manifest.get("caption_records")
+    if (
+        not isinstance(requested_splits, list)
+        or not requested_splits
+        or len(set(requested_splits)) != len(requested_splits)
+        or any(split not in ALLOWED_SPLITS for split in requested_splits)
+        or not isinstance(images, list)
+        or len(images) != image_count
+        or not isinstance(captions, list)
+        or len(captions) != caption_count
+    ):
+        raise ValueError("Invalid prepared split/record semantics")
+    seen_patches: set[str] = set()
+    seen_sar: set[str] = set()
+    seen_feature_indices: set[int] = set()
+    for record in images:
+        if (
+            not isinstance(record, dict)
+            or not isinstance(record.get("patch_id"), str)
+            or not record["patch_id"]
+            or not isinstance(record.get("s1_name"), str)
+            or not record["s1_name"]
+            or record.get("split") not in requested_splits
+            or record["patch_id"] in seen_patches
+            or record["s1_name"] in seen_sar
+            or not isinstance(record.get("source_feature_index"), int)
+            or record["source_feature_index"] in seen_feature_indices
+        ):
+            raise ValueError("Invalid prepared image split/identity semantics")
+        seen_patches.add(record["patch_id"])
+        seen_sar.add(record["s1_name"])
+        seen_feature_indices.add(record["source_feature_index"])
+    seen_annotations: set[str] = set()
+    for record, owner_index in zip(captions, caption_indices.tolist(), strict=True):
+        owner = images[owner_index]
+        annotation_id = record.get("annotation_id") if isinstance(record, dict) else None
+        annotation_key = str(annotation_id) if isinstance(annotation_id, (int, str)) else ""
+        if (
+            not isinstance(record, dict)
+            or not annotation_key.strip()
+            or annotation_key in seen_annotations
+            or record.get("patch_id") != owner["patch_id"]
+            or record.get("s1_name") != owner["s1_name"]
+            or record.get("source_feature_index") != owner["source_feature_index"]
+            or record.get("split") != owner["split"]
+            or record.get("use_partition") != owner["split"]
+            or record.get("training_eligible") is not (owner["split"] == "train")
+            or not isinstance(record.get("caption"), str)
+            or not record["caption"].strip()
+        ):
+            raise ValueError("Invalid prepared caption split/eligibility semantics")
+        seen_annotations.add(annotation_key)
 
 
 class TextProjection(nn.Module):
@@ -843,7 +991,13 @@ class OpenAIEmbedder:
     """OpenAI SDK adapter; authentication is read by the SDK from the environment."""
 
     def __init__(self) -> None:
-        from openai import OpenAI
+        try:
+            from openai import OpenAI
+        except ImportError as exc:
+            raise RuntimeError(
+                "OpenAI embedding support is not installed; install "
+                "satquery-preprocessing[assistant]"
+            ) from exc
 
         self.client = OpenAI()
 
