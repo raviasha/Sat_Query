@@ -2,7 +2,12 @@
 
 **Status: 14 September 2026.** This guide describes implemented modules, artifact contracts and extension boundaries for a contributor unfamiliar with the project.
 
-SatQuery is currently a file-based Python pipeline, not a web application. Its verified path is BigEarthNet imagery → CROMA features → land-cover fractions. A separate branch matches text annotations to those same images. There is no trained language model, query controller, application database or API in this version.
+SatQuery combines a file-based training pipeline with a local browser application. The verified
+training path is BigEarthNet imagery → CROMA features → land-cover fractions. The inference path
+accepts label-free Sentinel imagery → validates and normalizes it → runs CROMA plus a compatible
+coverage head → executes a bounded spatial tool → returns evidence, trace, and downloads. A
+separate experimental workflow prepares and trains a scene-level image-text projection; no real
+trained adapter or validated open-ended language generator is included yet.
 
 ## Concepts
 
@@ -17,6 +22,8 @@ SatQuery is currently a file-based Python pipeline, not a web application. Its v
 | Target | Nineteen reference-map class fractions for a block. |
 | Coverage head | Trainable linear 768 → 19 or MLP 768 → 256 → 128 → 19 head, separate from frozen CROMA. |
 | Annotation | Original text instruction/output linked to the scene or an explicit region. |
+| Assistant bundle | Label-free, bounded request ZIP with explicit sensor, date, TIFF, and band-index mappings. |
+| Tool trace | Observable selected task/model/tool/parameters/output; it excludes internal model reasoning. |
 | Manifest / receipt | JSON recording ordered samples, configuration, source provenance, hashes and completion checks. |
 
 ## Implemented data flow
@@ -44,19 +51,34 @@ flowchart TD
     B --> O
     O --> P[Matched text and feature links]
     D --> P
+    Q[Label-free TIFF or request ZIP] --> R[Strict assistant input validation]
+    R --> S[Optical, SAR, or joint CROMA runtime]
+    J --> S
+    S --> T[Deterministic coverage tools]
+    U[Question] --> V[Local rules or bounded OpenAI tool router]
+    V --> T
+    T --> W[Answer, grid or GeoJSON, trace, report]
+    P --> X[Caption-only text-pair preparation]
+    D --> X
+    X --> Y[Experimental image-text projection]
 ```
 
-Arrows express dependencies. Reference targets never enter CROMA or the predictor as inputs. Text matching does not train the coverage model. Core modules do not mount Drive; notebooks do so and invoke package functions through experiment scripts.
+Arrows express dependencies. Reference targets and annotation answers never enter live assistant
+inference. Text matching does not train the coverage model. The OpenAI router receives no imagery,
+dense grid, or computed answer. Core modules do not mount Drive; notebooks/scripts receive explicit
+persistent paths and invoke package functions.
 
 ## Repository map
 
 ```text
 src/satquery/              Reusable processing, models, evaluation and CLIs
+src/satquery/assistant/    Label-free runtime, tools, controller, web UI and adaptation/evaluation
 src/satquery/_vendor/      Pinned CROMA code, provenance and license
 scripts/                  Colab stage orchestration and artifact builders
 notebooks/                Generated workflows with embedded package wheels
 tests/                    Unit and optional local-data integration tests
 reports/pipeline-1000/     Historical small metrics/provenance receipts
+reports/assistant/         Portable application integration evidence
 docs/                     Guides and historical design notes
 pyproject.toml            Dependencies, extras and console entry points
 uv.lock                   Local dependency resolution
@@ -92,7 +114,10 @@ Completed shards are checked and skipped on resume. Different selections require
 **Input:** extracted BigEarthNet-S2, BigEarthNet-S1 and Reference_Maps hierarchy plus selected metadata.
 **Output:** aligned tensors, reference map, identifiers and provenance. This stage runs no CROMA model.
 
-The current loader requires reference maps. A label-free inference loader is a future extension, even though downstream prediction itself needs only features.
+`preprocessing.py` remains the training-data loader and therefore requires reference maps. Live
+assistant inference uses the separate strict Sentinel TIFF loader in
+[`assistant/inputs.py`](../src/satquery/assistant/inputs.py). Additional sensor and benchmark
+profiles, including Cartosat-2S/RISAT and RGB inputs, remain unsupported.
 
 ### 3. Save prepared batches
 
@@ -217,7 +242,89 @@ These scripts accept the notebook configuration (`P`, `IMAGE_ROOT`, `TEXT_SOURCE
 
 [audit_annotation_samples.py](../scripts/audit_annotation_samples.py) ports the six-image Colab audit into a standalone diagnostic with explicit paths. It streams the pinned text source, checks image/SAR pairs, reads six reference rasters from the selected ZIP, computes class areas and connected-component box extents, and writes per-claim comparisons and a hash receipt. Its manually transcribed claims apply only to those six images. This does not implement a general grounding parser or model evaluation. The exact historical recipe is retained with the audit report.
 
-Not performed: box parsing, token overlap, region pooling, phrase resolution, image–text alignment, retrieval or language training.
+The matcher itself does not parse boxes or train a model. The separate scene-level adaptation
+workflow described below consumes only verified caption rows; it does not turn bounding boxes into
+coverage targets.
+
+### 12. Load label-free assistant inputs
+
+**Module:** [assistant/inputs.py](../src/satquery/assistant/inputs.py).
+**Interface:** `load_bundle(path, destination)` returning `InputBundle` and `Observation` records.
+
+This is intentionally separate from `preprocessing.load_raw_patch`, whose training contract includes
+reference maps. The assistant loader accepts a bounded ZIP with an explicit `request.json` and TIFF
+band mappings. The web guided-upload assembler creates the same contract from named band files or a
+user-acknowledged standard-order stack; no second bundle-building implementation is needed.
+
+Validation covers ZIP traversal/links/duplicates and size limits; supported sensor/modality pairs;
+exact Sentinel band sets/order; TIFF band indices and driver; masks/finite data; projected metre,
+north-up geometry; native/aligned resolution; 1.2 km footprint; pair alignment; and temporal date
+order. Output observations hold one normalized `[C,120,120]` tensor, a preview, grid, date, and safe
+metadata. Reference maps, targets, and annotations are not accepted as inference inputs.
+
+### 13. Run specialists and deterministic spatial tools
+
+**Modules:** [assistant/runtime.py](../src/satquery/assistant/runtime.py),
+[assistant/tools.py](../src/satquery/assistant/tools.py).
+**Interfaces:** `CoverageRuntime.analyze`, `CoverageRuntime.analyze_cached`, `execute_task`.
+
+`CoverageRuntime` pins the official CROMA checkpoint hash, lazily loads the required encoder mode,
+and checks each head's feature contract before prediction. Optical input needs an
+`optical_encodings` head, SAR needs `SAR_encodings`, and an optical–SAR pair needs a
+`joint_encodings` head. A missing/incompatible head is a capability error; no random head or
+synthetic sensor input is substituted. The cached-feature route reuses `FeatureBatches` and is only
+for an explicitly disclosed demo.
+
+The tool registry is fixed to `coverage`, `presence`, `describe`, `locate`, and `change`. Exact
+nineteen-class names and four documented aliases are accepted. Location evidence is coarse 80 m
+cell GeoJSON transformed to WGS84. Temporal analysis compares two aligned, ordered, same-modality
+coverage predictions. It is provisional coverage delta, not a benchmarked change detector.
+Outputs are JSON-safe and exclude tensors.
+
+### 14. Route questions and serve the browser application
+
+**Modules:** [assistant/controller.py](../src/satquery/assistant/controller.py),
+[assistant/web.py](../src/satquery/assistant/web.py),
+[assistant/static/](../src/satquery/assistant/static/).
+**Entry point:** CLI `satquery-serve`.
+
+`AssistantController` uses either deterministic local routing or one OpenAI Responses call with
+strict function schemas and `store=False`. OpenAI may choose exactly one allowlisted tool and
+bounded arguments. It never receives pixels, feature grids, computed results, secrets, or server
+paths, and model-authored answer text is discarded. The local tool produces the authoritative
+measurements and answer. Authentication/rate-limit/timeout failures are sanitized and surfaced;
+there is no silent provider fallback.
+
+`create_app` injects runtime/controller dependencies, serializes heavy inference, spools and bounds
+the aggregate request body before multipart parsing, preserves a bounded allowlist of loaded-scene
+provenance, uses opaque result IDs, cleans temporary uploads, and persists only safe report/GeoJSON/
+preview artifacts under the configured output directory. It exposes status, advanced ZIP,
+guided TIFF, cached demo, and result-download routes. The browser renders untrusted values through
+`textContent`, shows capabilities/provider/demo status, a clickable evidence grid, trace,
+limitations, authoritative loaded-head training mode, a concise safe provenance summary, and
+downloads. Cached-demo status labels `--demo-fit-all` only as a manual CLI value. The server binds
+to localhost by default and rejects cross-origin API requests. See
+[the assistant guide](assistant.md).
+
+### 15. Adapt scene features to text and evaluate tasks
+
+**Modules:** [assistant/text_adaptation.py](../src/satquery/assistant/text_adaptation.py),
+[assistant/task_evaluation.py](../src/satquery/assistant/task_evaluation.py).
+**Driver:** [colab_adapt_text.py](../scripts/colab_adapt_text.py).
+
+The adaptation path verifies matched captions and `FeatureBatches`, mean-pools the declared spatial
+feature, obtains frozen 512-dimensional text embeddings, and trains a 768→256→512 projection.
+Only eligible train captions fit weights/retrieval bank; train-only normalization and validation
+selection are enforced; test/benchmark/conflict rows cannot train. Prepared semantic records and
+splits are cryptographically bound and independently validated at load time. Embedding caches are
+content/model/dimension keyed and record bounded credential-free provenance. Similarity is cosine
+similarity, not calibrated confidence. No real BigEarthNet.txt adapter has yet been trained.
+
+Task evaluation strictly joins explicit JSONL records and supports `vqa`, `area`, and `change`.
+It reports task counts, abstention/coverage, provisional normalized exact match, numerical area and
+class-fraction errors, and exact change-label sets without inventing a combined score. Its
+compatibility manifest records VRSBench, RSVQA, CDVQA, and the hidden ISRO/SAC evaluation as
+unsupported until their adapters, sensor profiles, models, and official scorers exist.
 
 ## Orchestration and generated artifacts
 
@@ -230,6 +337,7 @@ Not performed: box parsing, token overlap, region pooling, phrase resolution, im
 | `colab_stage6_7.py` | Test metrics, baseline, reliability and inference verification |
 | `colab_download_annotations.py` | Pinned official text download |
 | `colab_match_annotations.py` | Text matching, feature linking and stage receipt |
+| `colab_adapt_text.py` | Prepare caption pairs, train the experimental projection and report retrieval using saved features |
 | `build_download_notebook.py` | Embed the already-built wheel from dist/ |
 | `build_pipeline_notebook.py` | Build current wheel and embed stages 1–7 |
 | `build_annotation_notebook.py` | Rebuild main pipeline, reuse installer, generate text notebook |
@@ -247,7 +355,14 @@ Coverage stage scripts use experiment-specific paths/count assertions and should
 - **Splits:** every question, region and retrieval entry derived from an image must retain its partition. Source annotations are not independent images.
 - **Reference fidelity:** rasterized labels are reference evidence, not proof of fine-resolution real-world boundaries.
 - **Memory:** preprocessing/feature exports batch work, but validation/evaluation materializes eligible splits and the matcher retains selected rows.
-- **Compatibility:** paired BigEarthNet v2 inputs are supported. Arbitrary GeoTIFF layouts, missing bands, Cartosat/RISAT, RGB benchmarks and temporal pairs need explicit profiles/adaptation.
+- **Compatibility:** paired BigEarthNet v2 training data and the strict Sentinel assistant profile
+  are supported. The assistant accepts aligned same-modality dated pairs for provisional coverage
+  deltas. Arbitrary GeoTIFF layouts, missing bands, Cartosat/RISAT, and RGB benchmarks still need
+  explicit profiles/adaptation.
+- **Inference separation:** assistant requests never load reference maps, target fractions,
+  annotations, or answer text. Only validated image tensors enter CROMA.
+- **Provider boundary:** OpenAI selects a bounded tool only. Deterministic local code owns every
+  reported measurement and answer.
 - **Historical reports:** committed reports preserve a completed run, not live application state. Absolute Drive paths in them are provenance.
 - **Availability:** datasets, feature exports and trained weights are not in Git. Local lockfile and cloud runtime dependencies are distinct.
 
@@ -263,6 +378,12 @@ Coverage stage scripts use experiment-specific paths/count assertions and should
 | `test_evaluation.py` | Splits, validation scaling/training and coverage metrics |
 | `test_download.py` | Ranges, LMDB records, resume, sampling and TIFF/shard reconstruction |
 | `test_match_annotations.py` | Both-ID matching, duplicates, missing records and partition quarantine |
+| `test_assistant_inputs.py` | Label-free ZIP/TIFF contracts, grids, channels, limits and malicious archives |
+| `test_assistant_tools.py` | Runtime contracts, coverage/presence/location/description/change evidence |
+| `test_assistant_controller.py` | Local and one-call OpenAI routing, strict schemas, trace and sanitized failures |
+| `test_assistant_web.py` | Guided/ZIP/demo API, limits, artifact downloads and browser-safe status/content |
+| `test_text_adaptation.py` | Split quarantine, artifact binding, cache, projection training and retrieval |
+| `test_task_evaluation.py` | Strict record matching, task metrics and compatibility gaps |
 
 See [tests](../tests). Some integration cases require local three-area fixtures and skip without them. The exhaustive cloud raster audit is performed by its Colab script and recorded separately.
 
@@ -274,7 +395,9 @@ Suggested reading order:
 4. `CoverageHead`, `fit_with_validation`, `coverage_metrics`.
 5. `export_predictions` for current inference.
 6. `match_annotations.py` and its Colab feature-linking caller.
-7. Stage scripts and historical reports for the complete experiment.
+7. `assistant/inputs.py`, `runtime.py`, `tools.py`, `controller.py`, then `web.py`.
+8. `assistant/text_adaptation.py` and `task_evaluation.py`.
+9. Stage scripts and historical reports for the complete experiment.
 
 ## Proposed extensions (not implemented)
 
@@ -284,22 +407,25 @@ These are responsibilities under discussion, **not existing modules or finalized
 |---|---|---|
 | Annotation interpretation | Validate boxes/points, class phrases, question meaning and scope | Original annotations and raster geometry |
 | Region representation | Preserve grid/coordinates and compare pooling with spatial features | CROMA spatial outputs |
-| Presence/area specialist | Interpret classes/areas, run measurements and calibrated thresholds | Coverage predictions |
+| Presence/area specialist | Calibrate the implemented class/area measurements and thresholds | Coverage predictions |
 | Spatial Q&A | Count regions, infer adjacency/relative position | Spatial features and new supervision |
 | Text/point grounding | Predict requested boxes from image plus text or point | Features and verified box targets |
 | Region recognition/alignment | Learn appearance from verified named regions | Region features and class/phrase pairs |
-| Captioning / language adaptation | Generate current-image descriptions from spatial and numerical evidence | Features, text and specialist predictions |
+| Captioning / language adaptation | Train/validate the implemented projection and add a factual generator | Features, text and specialist predictions |
 | Metadata specialist | Use permitted dates, coordinates and lookups | Input metadata |
 | Optional retrieval | Index training scenes/regions as supporting examples | Features/text and optional learned alignment |
-| Change specialist | Understand genuine aligned dated pairs | New temporal dataset/model |
-| Input compatibility | Label-free inference and sensor/benchmark profiles | Current strict preprocessing profile |
-| Agentic controller | Validate queries/inputs, execute permitted tools, combine evidence and report actions | Implemented specialist registry |
-| API/UI | Upload, questions, selected regions, overlays and downloadable reports | Future backend/controller |
+| Change specialist | Replace provisional coverage deltas with benchmarked temporal understanding | New temporal dataset/model |
+| Input compatibility | Extend implemented label-free Sentinel validation with benchmark/sensor profiles | Current strict assistant profile |
+| Agentic controller | Add benchmark specialists to the implemented bounded registry | Implemented controller/tool registry |
+| API/UI | Extend the implemented upload/question/evidence/download UI for deployment | Current local FastAPI application |
 | Task-specific uncertainty | Calibrate numerical, presence, grounding and language reliability separately | Validation outputs and held-out checks |
 
 The design direction retains coverage measurement and adds spatial image–language learning. Full grids support scene questions and relationships; explicitly located regions may additionally use pooled features. A reference box can supervise training but cannot be supplied as an answer-bearing crop when testing localization. Missing annotations do not imply absence.
 
-Text annotations do not complete the temporal requirement. Cartosat-2S/RISAT and prescribed VRSBench/RSVQA/CDVQA inputs need separate compatibility/evaluation decisions. See [pending work](../README.md#pending-work).
+Text annotations do not complete the temporal requirement. Cartosat-2S/RISAT and prescribed
+VRSBench/RSVQA/CDVQA inputs need separate compatibility/evaluation implementations. See
+[assistant requirement status](assistant.md#sih26167-requirement-status) and
+[pending work](../README.md#pending-work).
 
 ## Maintenance rules
 

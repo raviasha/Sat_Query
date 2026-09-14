@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light">
+    <title>SatQuery · Grounded satellite answers</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <script src="/static/app.js" defer></script>
+  </head>
+  <body>
+    <header class="masthead">
+      <a class="brand" href="/" aria-label="SatQuery home">
+        <span class="brand-mark" aria-hidden="true">SQ</span>
+        <span>SatQuery</span>
+      </a>
+      <div class="status-strip" aria-label="Application status">
+        <span id="service-status" class="status-chip pending">Connecting</span>
+        <span id="capability-status" class="status-chip">Models: checking</span>
+        <span id="provider-status" class="status-chip">OpenAI: checking</span>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <p class="eyebrow">Evidence before prose</p>
+        <h1>Ask a bounded question about land cover.</h1>
+        <p class="lede">
+          SatQuery measures 19 land-cover classes on a 15 × 15 grid. It reports the
+          deterministic estimate, spatial evidence, model trace, and limitations with every answer.
+        </p>
+      </section>
+
+      <div class="workspace">
+        <section class="panel input-panel" aria-labelledby="input-heading">
+          <div class="panel-heading">
+            <div>
+              <p class="step">01 · Input</p>
+              <h2 id="input-heading">Choose your source</h2>
+            </div>
+          </div>
+
+          <div class="mode-grid" role="tablist" aria-label="Input mode">
+            <button class="mode-button active" data-panel="guided-panel" type="button">
+              <strong>Guided GeoTIFF upload</strong>
+              <span>For ordinary Sentinel band files or a standard-order stack</span>
+            </button>
+            <button class="mode-button" data-panel="zip-panel" type="button">
+              <strong>Advanced ZIP</strong>
+              <span>Reusable request.json manifest plus explicitly mapped TIFFs</span>
+            </button>
+          </div>
+
+          <form id="guided-form" class="input-mode" data-endpoint="/api/analyze-files">
+            <fieldset class="observation">
+              <legend>Observation 1</legend>
+              <div class="field-row">
+                <label>Modality
+                  <select name="modality1" data-modality="1">
+                    <option value="optical">Sentinel-2 optical</option>
+                    <option value="SAR">Sentinel-1 SAR</option>
+                  </select>
+                </label>
+                <label>Acquisition date
+                  <input name="acquired1" type="date" required>
+                </label>
+              </div>
+              <label>GeoTIFF file(s)
+                <input name="files1" type="file" accept=".tif,.tiff,image/tiff" multiple required>
+              </label>
+              <label class="check-row">
+                <input name="stack_order1" type="checkbox" value="true">
+                This is one stacked TIFF in the documented standard channel order
+              </label>
+              <label class="sar-field hidden" data-sar="1">SAR radiometry
+                <select name="radiometry1" disabled>
+                  <option value="">Choose explicitly</option>
+                  <option value="db">dB (VV, VH)</option>
+                </select>
+              </label>
+              <p class="hint">Separate files must end in _B01.tif … _B12.tif, or _VV.tif and _VH.tif.</p>
+            </fieldset>
+
+            <label class="check-row second-toggle">
+              <input id="second-observation" type="checkbox">
+              Add a co-registered sensor or second date
+            </label>
+            <fieldset id="observation-2" class="observation hidden" disabled>
+              <legend>Observation 2</legend>
+              <div class="field-row">
+                <label>Modality
+                  <select name="modality2" data-modality="2">
+                    <option value="optical">Sentinel-2 optical</option>
+                    <option value="SAR">Sentinel-1 SAR</option>
+                  </select>
+                </label>
+                <label>Acquisition date
+                  <input name="acquired2" type="date">
+                </label>
+              </div>
+              <label>GeoTIFF file(s)
+                <input name="files2" type="file" accept=".tif,.tiff,image/tiff" multiple>
+              </label>
+              <label class="check-row">
+                <input name="stack_order2" type="checkbox" value="true">
+                This is one stacked TIFF in the documented standard channel order
+              </label>
+              <label class="sar-field hidden" data-sar="2">SAR radiometry
+                <select name="radiometry2" disabled>
+                  <option value="">Choose explicitly</option>
+                  <option value="db">dB (VV, VH)</option>
+                </select>
+              </label>
+            </fieldset>
+
+            <div class="question-block"></div>
+          </form>
+
+          <form id="zip-form" class="input-mode hidden" data-endpoint="/api/analyze">
+            <label>Request ZIP
+              <input name="archive" type="file" accept=".zip,application/zip" required>
+            </label>
+            <details>
+              <summary>ZIP instructions and request.json example</summary>
+              <p>
+                Put request.json at the ZIP root. Map every required TIFF and band index explicitly.
+                No reference map is needed. Paths must be relative and every listed file must exist.
+              </p>
+              <pre>{
+  "schema_version": 1,
+  "observations": [{
+    "id": "scene-a",
+    "modality": "SAR",
+    "sensor": "Sentinel-1",
+    "acquired": "2026-02-03",
+    "radiometry": "db",
+    "bands": {
+      "VV": {"file": "scene_VV.tif", "band": 1},
+      "VH": {"file": "scene_VH.tif", "band": 1}
+    }
+  }]
+}</pre>
+            </details>
+            <div class="question-block"></div>
+          </form>
+
+          <template id="question-template">
+            <div class="question-area">
+              <p class="step">02 · Question</p>
+              <label>What do you want to measure?
+                <textarea name="question" maxlength="1000" rows="3" required
+                  placeholder="How much forest coverage is estimated?"></textarea>
+              </label>
+              <div class="examples" aria-label="Question examples">
+                <button type="button">Describe this scene</button>
+                <button type="button">How much forest coverage is estimated?</button>
+                <button type="button">Where is water coverage above 50%?</button>
+                <button type="button">How did built-up coverage change?</button>
+              </div>
+              <div class="submit-row">
+                <label>Question router
+                  <select name="provider">
+                    <option value="local">Local deterministic routing</option>
+                    <option value="openai">OpenAI tool router</option>
+                  </select>
+                </label>
+                <button class="primary" type="submit">Analyze</button>
+              </div>
+              <p class="hint">The browser never asks for an API key. OpenAI can select a measurement tool from the question and safe input summary; imagery and computed results stay local.</p>
+            </div>
+          </template>
+
+          <section id="demo-card" class="demo-card hidden" aria-labelledby="demo-title">
+            <div>
+              <p class="step">Cached feature demo</p>
+              <h3 id="demo-title">Try the configured model without an upload</h3>
+              <p id="demo-label">Loading demo status…</p>
+            </div>
+            <form id="demo-form">
+              <input name="index" type="number" min="0" value="0" aria-label="Demo sample index">
+              <input name="question" value="Describe this scene" maxlength="1000" aria-label="Demo question">
+              <select name="provider" aria-label="Demo question router">
+                <option value="local">Local</option>
+                <option value="openai">OpenAI tool router</option>
+              </select>
+              <button type="submit">Run demo</button>
+            </form>
+            <p class="demo-warning">The status shows only the manual CLI demo label. Each completed result reads the authoritative training mode from the loaded head. <strong>demo_fit_all</strong> is not held-out evidence.</p>
+          </section>
+        </section>
+
+        <section class="panel result-panel" aria-labelledby="result-heading">
+          <div class="panel-heading">
+            <div>
+              <p class="step">03 · Evidence</p>
+              <h2 id="result-heading">Analysis result</h2>
+            </div>
+            <span id="run-state" class="run-state idle">Ready</span>
+          </div>
+          <div id="empty-result" class="empty-result">
+            <div class="grid-ghost" aria-hidden="true"></div>
+            <p>Your deterministic answer, measurements, grid, trace, and downloads will appear here.</p>
+          </div>
+          <div id="error-box" class="error-box hidden" role="alert"></div>
+          <div id="result" class="hidden">
+            <div class="answer-card">
+              <span class="answer-label">Deterministic measurement</span>
+              <p id="deterministic-answer"></p>
+            </div>
+            <section class="model-disclosure" aria-labelledby="model-disclosure-heading">
+              <h3 id="model-disclosure-heading">Loaded model provenance</h3>
+              <p id="training-disclosure"></p>
+              <ul id="scene-provenance"></ul>
+            </section>
+            <img id="source-preview" class="source-preview hidden" alt="Satellite source preview">
+            <section>
+              <h3>Measurements</h3>
+              <div class="table-wrap"><table id="measurements"></table></div>
+            </section>
+            <section id="grid-section" class="hidden">
+              <div class="section-heading">
+                <h3>Clickable 15 × 15 evidence grid</h3>
+                <span id="cell-readout">Select a cell</span>
+              </div>
+              <div id="evidence-grid" class="evidence-grid"></div>
+              <div id="legend" class="legend"></div>
+            </section>
+            <section>
+              <h3>Limitations</h3>
+              <ul id="limitations"></ul>
+            </section>
+            <details>
+              <summary>Observable tool trace</summary>
+              <pre id="trace"></pre>
+            </details>
+            <nav id="downloads" class="downloads" aria-label="Result downloads"></nav>
+          </div>
+        </section>
+      </div>
+    </main>
+  </body>
+</html>

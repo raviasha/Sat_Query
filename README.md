@@ -1,16 +1,26 @@
 # SatQuery AI
 
-**A modular satellite-image learning pipeline, with a vision-language assistant under design.**
+**A modular satellite-image pipeline with a bounded, evidence-grounded browser assistant.**
 
-SatQuery currently downloads selected BigEarthNet v2 optical/SAR image pairs, prepares tensors, extracts frozen CROMA features, generates aligned land-cover percentage targets, trains a coverage model, evaluates it on held-out areas, and matches BigEarthNet.txt annotations to the images and features.
+SatQuery downloads selected BigEarthNet v2 optical/SAR image pairs, prepares tensors,
+extracts frozen CROMA features, generates aligned land-cover percentage targets, trains and
+evaluates coverage heads, and matches BigEarthNet.txt annotations. It also provides a local
+FastAPI browser application for validated Sentinel imagery. A fixed tool controller routes
+bounded questions to deterministic land-cover measurements, returns a preview and 15 × 15
+evidence grid, and records an auditable execution trace.
 
-The intended application is an agentic remote-sensing assistant for SIH26167: upload imagery, ask questions, describe scenes, locate regions, and compare dates. **This version has no conversational UI, web API, trained Q&A/captioning/grounding model, or temporal-change model.** The working product is a Python package and reproducible Colab workflows.
+The browser application is an implemented SIH26167 prototype, not a completed benchmark
+submission. Its current visual specialist is CROMA plus modality-specific coverage heads. OpenAI
+may select one allowlisted measurement tool, while all image processing and answers remain local.
+Open-ended VQA/caption generation, benchmarked change understanding, official benchmark adapters,
+and direct Cartosat-2S/RISAT profiles remain pending.
 
-Read the [architecture and module guide](docs/architecture.md) for code navigation, interfaces and extension points.
+Read the [assistant guide](docs/assistant.md) to launch and use the application, and the
+[architecture and module guide](docs/architecture.md) for code navigation and extension points.
 
 ## Current capabilities
 
-Status: **10 September 2026**. The recorded 1,000-area experiment ran on 9 September.
+Status: **15 September 2026**. The recorded 1,000-area experiment ran on 9 September.
 
 | Functionality | Status | Implementation |
 |---|---|---|
@@ -22,10 +32,16 @@ Status: **10 September 2026**. The recorded 1,000-area experiment ran on 9 Septe
 | Test on held-out areas and report per-class errors/support | Implemented and run | `evaluation.py`, `colab_stage6_7.py` |
 | Export predictions with matching historical reliability | Implemented and run | `predict_cover.py` |
 | Match official text records to images and saved features | Implemented and run | `match_annotations.py`, `colab_match_annotations.py` |
-| Parse boxes, pool region features and learn image–text alignment | Proposed; not implemented | No module yet |
-| Q&A, captions, grounding, RAG, change analysis, controller and GUI | Pending | No modules yet |
+| Label-free Sentinel-2/Sentinel-1 upload and validation | Implemented | `assistant/inputs.py`, guided and ZIP upload routes |
+| Optical, SAR, and fused coverage inference | Implemented; three-sample artifacts are demo-only | `assistant/runtime.py` |
+| Coverage, presence, description, coarse location, and coverage-delta tools | Implemented; thresholds/change output are uncalibrated prototypes | `assistant/tools.py` |
+| Local/OpenAI tool routing and browser application | Implemented | `assistant/controller.py`, `assistant/web.py` |
+| Scene-level CROMA-to-text adaptation workflow | Implemented workflow; no real adapter trained | `assistant/text_adaptation.py`, `scripts/colab_adapt_text.py` |
+| Task-level evaluation and compatibility manifest | Implemented framework; official benchmark adapters/scorers pending | `assistant/task_evaluation.py` |
 
-Modules live in [src/satquery](src/satquery) or [scripts](scripts). Current inference produces **class fractions per spatial block**, not textual answers or pixel-level segmentation.
+Modules live in [src/satquery](src/satquery) or [scripts](scripts). The assistant turns class
+fractions into deterministic natural-language measurement statements. It does not perform
+pixel-level segmentation or validated open-ended VQA.
 
 ## Verified experiment and limitations
 
@@ -93,10 +109,38 @@ Requires Python **3.11+** and [uv](https://docs.astral.sh/uv/). Public data/chec
 ```bash
 git clone https://github.com/raviasha/Sat_Query.git
 cd Sat_Query
-uv sync --locked --no-editable --extra dev --extra downloads --extra features
+uv sync --locked --no-editable --extra dev --extra downloads --extra features --extra assistant
 ```
 
-Distribution name: `satquery-preprocessing`; import name: `satquery`. There is no server to start. In a separate environment, `pip install '.[dev,downloads,features]'` is also supported, but does not reproduce the uv lock exactly. Non-editable installation avoids an editable-import problem observed on the development Mac.
+Distribution name: `satquery-preprocessing`; import name: `satquery`. In a separate environment,
+`pip install '.[dev,downloads,features,assistant]'` is also supported, but does not reproduce the
+uv lock exactly. Non-editable installation avoids an editable-import problem observed on the
+development Mac.
+
+### Launch the assistant
+
+Supply the pinned official CROMA checkpoint and at least one compatible coverage head. The API key
+is optional and stays in the server environment; local routing works without it.
+
+```bash
+export OPENAI_API_KEY='your-key'  # optional; never enter it in the browser
+
+uv run --no-sync satquery-serve \
+  --croma-checkpoint artifacts/CROMA_base.pt \
+  --optical-head artifacts/optical/head.pt \
+  --sar-head artifacts/sar/head.pt \
+  --joint-head artifacts/joint/head.pt \
+  --output-dir data/assistant-results \
+  --device cpu
+```
+
+Open `http://127.0.0.1:8000`. The server binds to localhost by default. Configure only the heads
+you have; the status strip reports the resulting capabilities. Add `--demo-features`,
+`--demo-capability`, and `--demo-fit-all` only for an explicitly labelled cached-feature demo.
+The flag is a manual corroborating label; each result report derives its authoritative training
+mode from the loaded head provenance. The flag does not turn fit-on-demo artifacts into held-out
+evidence. See [docs/assistant.md](docs/assistant.md) for exact TIFF/ZIP contracts, questions, output
+downloads, OpenAI behavior, adaptation commands, and the SIH26167 status matrix.
 
 ### Download and extract
 
@@ -153,7 +197,10 @@ uv run --no-sync satquery-predict-cover \
 
 Optionally append `--reliability data/evaluation/reliability.json` when a matching report has been generated through evaluation. The exporter checks checkpoint hash, feature contract and class order.
 
-For new images, repeat preprocessing and feature extraction with the same profile. **The current raw loader requires reference maps**; an inference-only image loader without labels is pending. The prediction module itself consumes features and requires no targets.
+For new training images, repeat preprocessing and feature extraction with the same profile. For
+assistant inference, use the separate label-free loader: guided TIFF upload or an advanced request
+ZIP. It requires no reference map, label, or annotation answer. The prediction module itself
+consumes features and requires no targets.
 
 ## Data and model contracts
 
@@ -204,6 +251,50 @@ Original strings, including boxes, remain unchanged. Boxes are **not yet parsed 
 
 Any benchmark annotation holds out its whole image; other image/text split disagreements are quarantined. See the [matching receipt](reports/pipeline-1000/stage-8-annotations-report.json).
 
+### Experimental image-text adaptation
+
+The reusable adaptation workflow pairs mean-pooled, verified CROMA scene features with frozen
+OpenAI `text-embedding-3-small` targets, then trains a small 768→256→512 projection. Only eligible
+training captions update weights; validation selects the checkpoint; held-out captions never enter
+the training retrieval bank. The prepared records and split semantics are cryptographically bound
+and revalidated when loaded.
+
+```bash
+PYTHONPATH=src python scripts/colab_adapt_text.py --edu-p /persistent/SatQuery prepare \
+  --annotations /persistent/SatQuery/annotations/matched \
+  --features /persistent/SatQuery/features \
+  --splits train,validation,test \
+  --name text-pairs
+
+PYTHONPATH=src python scripts/colab_adapt_text.py --edu-p /persistent/SatQuery train \
+  --prepared /persistent/SatQuery/text-adaptation/text-pairs \
+  --name text-adapter
+
+PYTHONPATH=src python scripts/colab_adapt_text.py --edu-p /persistent/SatQuery evaluate \
+  --prepared /persistent/SatQuery/text-adaptation/text-pairs \
+  --checkpoint /persistent/SatQuery/text-adaptation/text-adapter/best.pt \
+  --name retrieval-test.json --split test
+```
+
+Preparation needs a valid server/environment OpenAI key. The command explicitly prepares test
+records because the final command reports the test split. Training still uses only train records,
+validation alone selects the checkpoint, and test remains report-only. Similarity values are cosine
+similarities, not calibrated confidence. No successful real BigEarthNet.txt adapter training is
+recorded yet. The workflow does not generate captions or answer open-ended questions.
+
+Task-level JSONL evaluation is separate from coverage MAE:
+
+```bash
+PYTHONPATH=src python -m satquery.assistant.task_evaluation \
+  --references data/task-references.jsonl \
+  --predictions data/task-predictions.jsonl \
+  --output data/task-evaluation.json \
+  --compatibility-output data/benchmark-compatibility.json
+```
+
+It supports strict `vqa`, `area`, and `change` records. Its normalized exact match is provisional,
+not an official VRSBench/RSVQA/CDVQA scorer.
+
 ## Pending work
 
 These are design directions and known gaps, **not implemented features or a finalized implementation plan**.
@@ -216,19 +307,20 @@ These are design directions and known gaps, **not implemented features or a fina
 | Counting and spatial relationships | Learn connected regions, adjacency and relative position; coverage totals alone are insufficient. |
 | Multiple-choice Q&A | Preserve options and underlying task meaning; test option reordering and question-only shortcuts. |
 | Grounding | Train full-image + text → box and full-image + point → box. Evaluate predicted regions and absent-target requests without supplying reference boxes at inference. |
-| Captioning / language adaptation | Train a remote-sensing-adapted language component with spatial features and realistic specialist evidence; check factuality. |
+| Captioning / language adaptation | Successfully train and validate the implemented BigEarthNet.txt image-text projection; add a validated open-ended VQA/caption generator. |
 | Metadata questions | Route date/location/climate questions to permitted metadata or tools; avoid filename and benchmark-answer leakage. |
 | Optional RAG | Compare train-only scene/region retrieval with adapted models; learn alignment for direct image–text comparison. Similar examples do not establish current-image facts. |
 | Coverage quality and uncertainty | Expand class/geographic support, compare models on validation, calibrate task-specific reliability and reserve a final held-out evaluation. |
-| Single-sensor / fusion | Compare optical-only, SAR-only and joint variants; demonstrate whether SAR helps; support image loading without reference labels. |
-| Temporal analysis | Obtain genuine aligned dated pairs, train change description/VQA and evaluate on prescribed temporal data. Optical/SAR pairing is not temporal change. |
+| Single-sensor / fusion | Compare optical-only, SAR-only and joint variants on held-out data and demonstrate whether SAR improves task results. |
+| Temporal analysis | Benchmark a temporal change model on genuine aligned dated pairs and prescribed change data. Current output is provisional class-coverage delta; optical/SAR pairing is not temporal change. |
 | Sensor portability | Add appropriate Cartosat-2S/RISAT and approved RGB benchmark profiles/adaptation; do not fabricate Sentinel bands. |
-| Agentic backend | Implement query interpretation, compatibility checks, permitted tool registry, routing, evidence combination and observable execution summaries. |
-| User application | Add API, upload/preview, text questions, region selection, overlays and downloadable reports. |
+| Agentic backend | Extend the implemented fixed tool router with benchmark task specialists while retaining input checks and observable traces. |
+| User application | Extend the implemented upload/preview/question/evidence/download UI for validated benchmark workflows and deployment. |
 | Experiment tooling | Replace fixed Colab paths/counts with configuration; add validation/evaluation CLIs, scalable streaming and model artifact distribution. |
-| Delivery | Resolve VRSBench/RSVQA/CDVQA protocols, run compliant evaluations, add CI/deployment and decide a project license. |
+| Delivery | Implement official VRSBench/RSVQA/CDVQA adapters and scorers, run SAC evaluation, add CI/deployment and decide a project license. |
 
-The proposed architecture retains the coverage specialist and adds spatial image–language learning. Preserve full feature grids alongside optional pooled vectors. See [proposed extension boundaries](docs/architecture.md#proposed-extensions-not-implemented).
+The architecture retains the coverage specialist and keeps full feature grids alongside optional
+pooled vectors. See [extension boundaries](docs/architecture.md#proposed-extensions-not-implemented).
 
 ## Development and verification
 
@@ -242,7 +334,11 @@ uv build --wheel
 
 Tests cover preprocessing, export contracts, taxonomy/alignment, features, training, metrics, prediction provenance, selective downloads and text matching. Some integration tests require the original local three-area fixture and skip without it. Unit tests do not repeat the 1,000-area cloud experiment; its historical receipts are included separately.
 
-Publication verification on 10 September 2026: **93 tests passed**, Ruff passed, and the wheel built successfully. The test run emitted 44 Rasterio/Affine pending-deprecation warnings. All three notebooks were rebuilt; their code cells parse, outputs are empty, and embedded package source matches the current repository. The cloud experiment was not rerun for this documentation release.
+Application integration verification on 14 September 2026: **213 tests passed and 5 optional
+local-data tests skipped**. Ruff lint and task-owned format checks passed, JavaScript syntax passed,
+and a wheel containing all assistant modules plus the `satquery-serve` entry point built and
+imported. Repository-wide formatting still reports six historical files outside this milestone;
+they were left unchanged. The 1,000-area cloud experiment and generated notebooks were not rerun.
 
 Rebuild notebooks after package or stage-script changes:
 
@@ -259,6 +355,7 @@ Git contains source, tests, notebooks, documentation, the lockfile and small rep
 ## Documentation and provenance
 
 - [Architecture and codebase guide](docs/architecture.md)
+- [Browser assistant setup, contracts and requirement status](docs/assistant.md)
 - [Selective downloading](docs/download-bigearthnet.md)
 - [Channel-order evidence](docs/channel-order.md)
 - [CROMA feature API](docs/croma-features.md)
