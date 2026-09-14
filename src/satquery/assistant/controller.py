@@ -87,20 +87,13 @@ ships, trees, or other objects. They do not support RGB, Cartosat, RISAT, benchm
 weather, or object detection. Never write or execute code. Choose a function only when its
 documented measurement can answer the question. Use threshold 0.5 unless the user explicitly
 provides another fraction from 0 through 1. If you include companion text with the function
-call, keep it general and include no numbers or numeric claims; all measurements are produced
-locally after routing."""
+call, it will be ignored. Return only the function call; all user-facing answers and measurements
+are produced locally after routing."""
 
 _SECRET_KEY = re.compile(r"(?:api[_-]?key|authorization|password|secret|token)", re.IGNORECASE)
 _SECRET_VALUE = re.compile(r"(?i)(?:bearer\s+\S+|\b(?:sk|rk|pk)-[A-Za-z0-9_-]{4,}\b)")
 _ABSOLUTE_PATH = re.compile(
     r"(?<![\w.])(?:/[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)+|[A-Za-z]:\\[^\s'\"]+)"
-)
-_NUMBER_WORD = re.compile(
-    r"\b(?:zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|"
-    r"thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|"
-    r"thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million|"
-    r"billion|half|quarter)\b",
-    re.IGNORECASE,
 )
 
 
@@ -119,9 +112,12 @@ def _abstention(
     function_calls: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     answer = f"I cannot answer this request: {reason}"
+    provider_role = "tool_routing_only" if provider == "openai" else "deterministic_routing"
     return {
         "provider": provider,
+        "provider_role": provider_role,
         "language_model": model,
+        "answer_source": "local_policy",
         "question": question,
         "abstained": True,
         "answer": answer,
@@ -135,7 +131,9 @@ def _abstention(
         "trace": {
             "selected_tool": None,
             "provider": provider,
+            "provider_role": provider_role,
             "language_model": model,
+            "answer_source": "local_policy",
             "parameters": {},
             "function_calls": function_calls or [],
         },
@@ -240,10 +238,6 @@ def _rejected_calls(calls: list[Any], reason: str) -> list[dict[str, Any]]:
     return [{**_call_record(call), "accepted": False, "rejection_reason": reason} for call in calls]
 
 
-def _contains_numeric_claim(wording: str) -> bool:
-    return bool(re.search(r"\d", wording) or _NUMBER_WORD.search(wording))
-
-
 def _extract_class(question: str) -> str | None:
     aliases = ["built-up", "built up", "builtup", "forest", "farmland", "water"]
     names = [item["name"] for item in class_schema()]
@@ -287,7 +281,7 @@ def _local_route(question: str) -> tuple[str, dict[str, Any]] | None:
 
 
 class AssistantController:
-    """Select one fixed measurement tool and optionally ask OpenAI to word its result."""
+    """Select one fixed measurement tool and return only locally computed answers."""
 
     def __init__(self, *, openai_client: Any = _UNSET, model: str | None = None):
         self.model = model or os.environ.get("SATQUERY_OPENAI_MODEL", DEFAULT_MODEL)
@@ -344,8 +338,12 @@ class AssistantController:
         output.update(
             {
                 "provider": provider,
+                "provider_role": (
+                    "tool_routing_only" if provider == "openai" else "deterministic_routing"
+                ),
                 "language_model": model,
                 "question": question,
+                "answer_source": "deterministic_tool",
                 "deterministic_answer": result["answer"],
                 "llm_wording": None,
             }
@@ -353,7 +351,9 @@ class AssistantController:
         output["trace"] = {
             **result["trace"],
             "provider": provider,
+            "provider_role": output["provider_role"],
             "language_model": model,
+            "answer_source": "deterministic_tool",
             "function_calls": [],
         }
         return output
@@ -473,17 +473,6 @@ class AssistantController:
         result["trace"]["function_calls"] = [trace_call]
         if result["abstained"]:
             return result
-
-        text = _field(response, "output_text", "")
-        if isinstance(text, str) and text.strip():
-            candidate = text.strip()[:2000]
-            if not _contains_numeric_claim(candidate):
-                result["llm_wording"] = candidate
-            else:
-                result["limitations"].append(
-                    "Optional OpenAI wording was omitted because it contained a numeric claim; "
-                    "all measurements remain in the deterministic answer and evidence."
-                )
         return result
 
     def answer(

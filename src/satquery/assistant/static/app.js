@@ -172,9 +172,6 @@ function renderResult(report) {
   byId("error-box").classList.add("hidden");
   byId("result").classList.remove("hidden");
   setText(byId("deterministic-answer"), report.deterministic_answer || report.answer);
-  const wording = byId("llm-card");
-  wording.classList.toggle("hidden", !report.llm_wording);
-  setText(byId("llm-wording"), report.llm_wording);
   renderMeasurements(report.measurements);
   renderGrid(report.evidence);
 

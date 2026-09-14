@@ -30,9 +30,9 @@ or SAR radiometry.
 - The default language model is `gpt-4.1-mini-2025-04-14`, configurable through
   `SATQUERY_OPENAI_MODEL`. The OpenAI SDK reads `OPENAI_API_KEY` from its own environment;
   no API-key argument or browser form exists.
-- The Responses API receives a question and safe input summary for routing, then compact
-  deterministic measurements for optional wording. Pixel arrays, previews, dense evidence
-  grids, filesystem paths, and raw imagery do not leave the server.
+- The Responses API receives only a question and safe input summary for routing. Pixel arrays,
+  previews, computed measurements, dense evidence grids, filesystem paths, and raw imagery do
+  not leave the server.
 - Every function definition is a flat strict Responses tool with
   `additionalProperties: false` and every declared property required. An assistant request
   makes at most one Responses call, used for routing, with `store=False`. Deterministic tool
@@ -42,9 +42,9 @@ or SAR radiometry.
   identifiers, and multiple tool calls abstain rather than execute.
 - Object-count questions are rejected before either provider is called because the coverage
   taxonomy cannot count buildings, roads, vehicles, ships, trees, or similar objects.
-- The deterministic measurement answer always remains separate and visible. Optional companion
-  text from the same routing response is limited to 2,000 characters and omitted if it contains
-  any numeric claim; all measurements stay in deterministic evidence. Provider failures become
+- The user-facing answer always comes from the deterministic tool or fixed local policy. Model
+  response text is ignored, and `llm_wording` remains null. `answer_source` and `provider_role`
+  make the distinction explicit in the report and observable trace. Provider failures become
   bounded actionable errors without including the upstream exception or credential.
 
 ## Web application
@@ -205,9 +205,9 @@ Regression-first red evidence:
 ```
 
 The controller now uses exactly one model call per OpenAI request. It executes the selected tool
-locally and never sends a function output back for a second model call. Optional text can only
-come from that same response and is discarded whenever it contains a digit or number word, so a
-fraction, class index, area, date, or other numeric value cannot be relabeled by generated prose.
+locally and never sends a function output back for a second model call. This round initially
+filtered same-response text containing digits or number words; fix round 2 replaces that finite
+filter by discarding all routing-response text.
 
 Every returned function-call attempt is recorded in bounded form. Argument strings, nested
 collections, keys, call IDs, and names have depth/count/length limits; credential-like values and
@@ -245,6 +245,55 @@ All checks passed!
   src/satquery/assistant/controller.py src/satquery/assistant/web.py \
   tests/test_assistant_controller.py tests/test_assistant_web.py
 4 files already formatted
+
+node --check src/satquery/assistant/static/app.js
+passed
+
+git diff --check
+passed
+```
+
+## Fix round 2
+
+Review found that the finite digit and number-word filter still admitted semantic measurements
+such as “a third” and “forest dominates.” The routing model has never received computed tool
+results, so no model-authored answer text can be safely presented as grounded output.
+
+Regression-first red evidence:
+
+```text
+/tmp/satquery-nonlinear-env/bin/python -m pytest -q \
+  tests/test_assistant_controller.py \
+  tests/test_assistant_web.py::test_status_and_browser_explain_capabilities_and_demo_fit_all
+6 failed, 16 passed
+```
+
+The controller now ignores `output_text` unconditionally. OpenAI can only select one validated
+tool and its arguments; execution, answer text, measurements, and evidence stay local. Reports
+retain `llm_wording: null` for compatibility and add `provider_role: tool_routing_only` plus
+`answer_source: deterministic_tool` to both the top-level response and trace for successful
+OpenAI routing. Fixed local abstentions declare `answer_source: local_policy`. The browser labels
+the provider control as a question router and has no model-wording result card.
+
+Green evidence:
+
+```text
+/tmp/satquery-nonlinear-env/bin/python -m pytest -q \
+  tests/test_assistant_controller.py tests/test_assistant_web.py
+33 passed
+
+/tmp/satquery-nonlinear-env/bin/python -m pytest -q
+180 passed, 5 skipped
+
+/tmp/satquery-nonlinear-env/bin/python -m ruff check \
+  src/satquery/assistant/controller.py tests/test_assistant_controller.py \
+  tests/test_assistant_web.py
+All checks passed!
+
+/tmp/satquery-nonlinear-env/bin/python -m ruff format --check \
+  src/satquery/assistant/controller.py tests/test_assistant_controller.py \
+  tests/test_assistant_web.py
+3 files already formatted
 
 node --check src/satquery/assistant/static/app.js
 passed

@@ -158,15 +158,15 @@
                 <button type="button">How did built-up coverage change?</button>
               </div>
               <div class="submit-row">
-                <label>Answer provider
+                <label>Question router
                   <select name="provider">
                     <option value="local">Local deterministic routing</option>
-                    <option value="openai">OpenAI wording + tool routing</option>
+                    <option value="openai">OpenAI tool router</option>
                   </select>
                 </label>
                 <button class="primary" type="submit">Analyze</button>
               </div>
-              <p class="hint">The browser never asks for an API key. OpenAI receives text summaries and compact measurements, never imagery.</p>
+              <p class="hint">The browser never asks for an API key. OpenAI can select a measurement tool from the question and safe input summary; imagery and computed results stay local.</p>
             </div>
           </template>
 
@@ -179,9 +179,9 @@
             <form id="demo-form">
               <input name="index" type="number" min="0" value="0" aria-label="Demo sample index">
               <input name="question" value="Describe this scene" maxlength="1000" aria-label="Demo question">
-              <select name="provider" aria-label="Demo answer provider">
+              <select name="provider" aria-label="Demo question router">
                 <option value="local">Local</option>
-                <option value="openai">OpenAI</option>
+                <option value="openai">OpenAI tool router</option>
               </select>
               <button type="submit">Run demo</button>
             </form>
@@ -206,10 +206,6 @@
             <div class="answer-card">
               <span class="answer-label">Deterministic measurement</span>
               <p id="deterministic-answer"></p>
-            </div>
-            <div id="llm-card" class="answer-card wording hidden">
-              <span class="answer-label">Optional OpenAI wording</span>
-              <p id="llm-wording"></p>
             </div>
             <img id="source-preview" class="source-preview hidden" alt="Satellite source preview">
             <section>

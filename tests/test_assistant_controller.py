@@ -140,7 +140,7 @@ def test_object_count_is_declined_before_any_openai_request():
     assert api.calls == []
 
 
-def test_openai_uses_one_strict_allowlisted_call_and_keeps_nonnumeric_wording():
+def test_openai_uses_one_strict_allowlisted_call_only_for_tool_routing():
     from satquery.assistant.controller import AssistantController
 
     routing = SimpleNamespace(
@@ -154,8 +154,11 @@ def test_openai_uses_one_strict_allowlisted_call_and_keeps_nonnumeric_wording():
     result = controller.answer("How much forest is there?", [_scene()], summary, provider="openai")
 
     assert result["provider"] == "openai"
-    assert result["llm_wording"] == "A deterministic forest coverage measurement follows."
+    assert result["llm_wording"] is None
+    assert result["answer_source"] == "deterministic_tool"
     assert result["deterministic_answer"].startswith("Estimated forest coverage")
+    assert result["answer"] == result["deterministic_answer"]
+    assert routing.output_text not in json.dumps(result)
     assert len(api.calls) == 1
     first = api.calls[0]
     assert first["model"] == "gpt-4.1-mini-2025-04-14"
@@ -180,6 +183,8 @@ def test_openai_uses_one_strict_allowlisted_call_and_keeps_nonnumeric_wording():
     assert result["trace"]["function_calls"][0]["arguments"] == {"class_name": "forest"}
     assert result["trace"]["function_calls"][0]["accepted"] is True
     assert "output" in result["trace"]["function_calls"][0]
+    assert result["trace"]["provider_role"] == "tool_routing_only"
+    assert result["trace"]["answer_source"] == "deterministic_tool"
 
 
 @pytest.mark.parametrize(
@@ -187,9 +192,11 @@ def test_openai_uses_one_strict_allowlisted_call_and_keeps_nonnumeric_wording():
     [
         "Forest has 0.3% coverage.",
         "Class 8 is dominant.",
+        "Forest covers a third of the scene.",
+        "Forest dominates the scene.",
     ],
 )
-def test_openai_wording_with_any_numeric_claim_is_omitted(wording):
+def test_openai_model_authored_answer_text_is_always_omitted(wording):
     from satquery.assistant.controller import AssistantController
 
     routing = SimpleNamespace(
@@ -202,7 +209,11 @@ def test_openai_wording_with_any_numeric_claim_is_omitted(wording):
     )
 
     assert result["llm_wording"] is None
-    assert any("numeric claim" in item for item in result["limitations"])
+    assert wording not in result["answer"]
+    assert wording not in result["deterministic_answer"]
+    assert wording not in json.dumps(result["trace"])
+    assert result["answer_source"] == "deterministic_tool"
+    assert result["trace"]["provider_role"] == "tool_routing_only"
     assert len(api.calls) == 1
 
 

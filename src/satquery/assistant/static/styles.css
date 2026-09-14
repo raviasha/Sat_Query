@@ -71,7 +71,6 @@ pre { max-width: 100%; overflow: auto; padding: 14px; border-radius: 12px; backg
 .grid-ghost { width: 155px; height: 155px; margin: auto; border-radius: 18px; opacity: .55; background: repeating-linear-gradient(90deg, transparent 0 9px, #dce5d6 9px 10px), repeating-linear-gradient(0deg, #f4f7ef 0 9px, #dce5d6 9px 10px); transform: rotate(-4deg); }
 #result { display: grid; gap: 22px; margin-top: 24px; }
 .answer-card { padding: 17px 18px; border-left: 4px solid var(--lime); border-radius: 4px 13px 13px 4px; background: #f4f8e8; }
-.answer-card.wording { border-color: #88a896; background: #f3f7f5; }
 .answer-card p { margin: 7px 0 0; line-height: 1.58; }
 .answer-label { font-size: .68rem; font-weight: 850; text-transform: uppercase; letter-spacing: .11em; color: var(--green); }
 .source-preview { display: block; width: min(100%, 420px); aspect-ratio: 1; object-fit: cover; border-radius: 15px; image-rendering: auto; }
