@@ -218,6 +218,8 @@ def test_load_sar_cross_modal_and_temporal_configurations(tmp_path):
         (lambda value: value["observations"][0]["bands"].pop("VH"), "bands"),
         (lambda value: value["observations"][0].update(radiometry="linear"), "radiometry"),
         (lambda value: value.update(schema_version=2), "schema"),
+        (lambda value: value.update(schema_version=True), "schema"),
+        (lambda value: value.update(schema_version=1.0), "schema"),
     ],
 )
 def test_manifest_rejects_unknown_sensor_single_band_sar_and_wrong_schema(

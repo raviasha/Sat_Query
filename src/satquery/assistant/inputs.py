@@ -146,7 +146,12 @@ def _validate_manifest(
         raise ValueError("request.json must contain valid UTF-8 JSON") from exc
     if not isinstance(request, dict) or set(request) != {"schema_version", "observations"}:
         raise ValueError("request.json must contain only schema_version and observations")
-    if request["schema_version"] != 1:
+    schema_version = request["schema_version"]
+    if (
+        not isinstance(schema_version, int)
+        or isinstance(schema_version, bool)
+        or schema_version != 1
+    ):
         raise ValueError("Unsupported request schema_version; expected 1")
     observations = request["observations"]
     if not isinstance(observations, list) or not observations:

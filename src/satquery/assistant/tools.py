@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import math
+from datetime import date
 from typing import Any
 
 import numpy as np
@@ -110,7 +111,11 @@ def _validate_scene(scene: SceneResult) -> np.ndarray:
 
 def _scene_limitations(scenes: list[SceneResult]) -> list[str]:
     limitations = [
-        "Coverage values are model-estimated fractions of 80 m cells and are not surveyed ground truth."
+        "Coverage values are model-estimated fractions of 80 m cells and are not surveyed ground truth.",
+        (
+            "Each 80 m cell is a spatial anchor; its CROMA feature can incorporate neighboring "
+            "and whole-scene context through attention."
+        ),
     ]
     scopes = sorted(
         {
@@ -372,7 +377,9 @@ def _aligned_temporal(scenes: list[SceneResult]) -> None:
     before, after = scenes
     if before.modality != after.modality:
         raise ValueError("change requires two scenes of the same modality")
-    if before.acquired is None or after.acquired is None or before.acquired >= after.acquired:
+    if not isinstance(before.acquired, date) or not isinstance(after.acquired, date):
+        raise TypeError("change requires datetime.date acquisition values")
+    if before.acquired >= after.acquired:
         raise ValueError("change requires distinct scene dates in ascending order")
     if before.grid != after.grid:
         raise ValueError("change requires exactly aligned scene grids")

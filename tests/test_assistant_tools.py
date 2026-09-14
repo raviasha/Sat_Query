@@ -389,6 +389,37 @@ def test_tools_reject_geographic_crs_for_fixed_square_metre_areas():
         execute_task("coverage", [scene], class_name="water")
 
 
+def test_change_requires_datetime_date_instances():
+    from satquery.assistant.tools import execute_task
+
+    before = _scene("before", "2026-01-01")
+    after = _scene("after", "2026-02-01")
+    with pytest.raises(TypeError, match="datetime.date"):
+        execute_task("change", [before, after], class_name="water")
+
+
+def test_spatial_outputs_qualify_attention_context_for_80_m_anchors():
+    from satquery.assistant.tools import execute_task
+
+    one = _scene()
+    before = _scene("before", date(2026, 1, 1))
+    after = _scene("after", date(2026, 2, 1))
+    results = [
+        execute_task("coverage", [one], class_name="forest"),
+        execute_task("presence", [one], class_name="forest"),
+        execute_task("describe", [one]),
+        execute_task("locate", [one], class_name="forest"),
+        execute_task("change", [before, after], class_name="forest"),
+    ]
+    for result in results:
+        limitations = " ".join(result["limitations"]).lower()
+        assert "80 m" in limitations
+        assert "spatial anchor" in limitations
+        assert "neighboring" in limitations
+        assert "whole-scene context" in limitations
+        assert "attention" in limitations
+
+
 @pytest.mark.parametrize("task", ["segment", "detect", "chat"])
 def test_unknown_task_abstains_instead_of_guessing(task):
     from satquery.assistant.tools import execute_task
