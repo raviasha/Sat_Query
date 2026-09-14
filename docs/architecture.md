@@ -1,6 +1,6 @@
 # SatQuery architecture and codebase guide
 
-**Status: 10 September 2026.** This guide describes implemented modules, artifact contracts and extension boundaries for a contributor unfamiliar with the project.
+**Status: 14 September 2026.** This guide describes implemented modules, artifact contracts and extension boundaries for a contributor unfamiliar with the project.
 
 SatQuery is currently a file-based Python pipeline, not a web application. Its verified path is BigEarthNet imagery → CROMA features → land-cover fractions. A separate branch matches text annotations to those same images. There is no trained language model, query controller, application database or API in this version.
 
@@ -15,7 +15,7 @@ SatQuery is currently a file-based Python pipeline, not a web application. Its v
 | Token / block | One of 225 spatial feature positions, anchored to 8 × 8 input pixels, or 80 × 80 m here. |
 | Feature | A learned 768-value representation, with CROMA attention context from the wider scene. |
 | Target | Nineteen reference-map class fractions for a block. |
-| Coverage head | Trainable 768 → 19 linear layer, separate from frozen CROMA. |
+| Coverage head | Trainable linear 768 → 19 or MLP 768 → 256 → 128 → 19 head, separate from frozen CROMA. |
 | Annotation | Original text instruction/output linked to the scene or an explicit region. |
 | Manifest / receipt | JSON recording ordered samples, configuration, source provenance, hashes and completion checks. |
 
@@ -152,7 +152,7 @@ New model consumers should reuse this verified loading boundary instead of indep
 **Module:** [prediction.py](../src/satquery/prediction.py).
 **Interfaces:** `CoverageHead`, `coverage_loss`, `save_head`, `load_head`.
 
-The head is `Linear(768,19)`. Training uses logits with soft-target cross-entropy; `predict` returns softmax fractions. A head checkpoint contains its state dictionary, dimensions and supplied provenance, not CROMA weights.
+The default head is `Linear(768,19)`. `CoverageHead(architecture="mlp")` adds two hidden layers (256 and 128), GELU and 0.1 dropout. Checkpoint architecture identifiers select the correct head on reload; legacy linear checkpoints remain compatible. Training uses logits with soft-target cross-entropy; `predict` returns softmax fractions. A head checkpoint contains its state dictionary, dimensions and supplied provenance, not CROMA weights.
 
 Fractions estimate class area. They must not be relabeled as class-presence confidence.
 
@@ -164,9 +164,13 @@ Fractions estimate class area. They must not be relabeled as class-presence conf
 
 **Validation-selected route:** [validation_training.py](../src/satquery/validation_training.py), `fit_with_validation`.
 
-Accepts separate train/validation `TokenSplit` objects, rejects overlapping image IDs, fits feature scaling on training data only, trains with AdamW and retains the best validation-loss epoch. Constant/nearly constant dimensions use scale 1. Scaling is folded into the final head, so inference consumes original features. It returns a model and history; callers own saving.
+Accepts separate train/validation `TokenSplit` objects, rejects overlapping image IDs, fits feature scaling on training data only, trains with AdamW and retains the best validation-loss epoch. Constant/nearly constant dimensions use scale 1. Scaling is folded into the first affine layer for either architecture, so inference consumes original features. The same fitting function accepts `architecture="linear"` or `"mlp"`; normalization uses bounded chunks to limit temporary memory. It returns a model and history; callers own saving.
 
 [colab_stage5.py](../scripts/colab_stage5.py) saves the full experiment metadata/model, reload-verifies predictions and writes training/stage receipts. Although the shared loader materializes all splits, only training and validation enter fitting; test data does not select weights or epochs.
+
+**Seeded model comparison:** [compare_heads.py](../src/satquery/compare_heads.py), `run_comparison`.
+
+Reuses the shared loader, fitting, checkpoint and evaluation modules. Fits each architecture with three seeds, saves each completed run for reuse, and locks the architecture/seed decision using validation loss before test evaluation. Produces an experiment-level comparison plus per-seed checkpoints, predictions, metrics and reliability reports. See [nonlinear comparison](nonlinear-comparison.md) for execution and storage details.
 
 ### 9. Evaluate held-out coverage
 
