@@ -1,0 +1,103 @@
+{
+  "patch_id": "S2A_MSIL2A_20170613T101031_N9999_R022_T33UUP_61_39",
+  "split": "test",
+  "scope": "22 annotations from one image; illustrative audit, not a dataset-wide accuracy estimate",
+  "source_url": "https://datasets-server.huggingface.co/filter?dataset=BIFOLD-BigEarthNetv2-0%2FBigEarthNet.txt&config=default&split=all_data&where=%22patch_id%22%3D%27S2A_MSIL2A_20170613T101031_N9999_R022_T33UUP_61_39%27&length=30",
+  "reference_map": "/Users/rampetaravishankar/Documents/ChatGPT/satquery/data/bigearthnet-v2/small-sample/Reference_Maps/S2A_MSIL2A_20170613T101031_N9999_R022_T33UUP/S2A_MSIL2A_20170613T101031_N9999_R022_T33UUP_61_39/S2A_MSIL2A_20170613T101031_N9999_R022_T33UUP_61_39_reference_map.tif",
+  "reference_sha256": "c6455376332e1c8a677405eeb1d6de45debd59448f5e78b64a80514b89ae1631",
+  "pixel_area_m2": 100.0,
+  "classes": [
+    {
+      "class_name": "Broad-leaved forest",
+      "clc_code": 311,
+      "pixels": 5857,
+      "image_percentage": 40.673611111111114,
+      "reference_area_m2": 585700,
+      "caption_area_m2": 586000,
+      "rounded_area_matches": true,
+      "bbox_annotation_id": 27530,
+      "annotation_box": [
+        0,
+        0,
+        1,
+        0.94
+      ],
+      "reference_extent_outward_2dp": [
+        0.0,
+        0.0,
+        1.0,
+        0.94
+      ],
+      "extent_matches": true,
+      "class_percentage_inside_box": 43.26979905437352
+    },
+    {
+      "class_name": "Inland waters",
+      "clc_code": 511,
+      "pixels": 4857,
+      "image_percentage": 33.729166666666664,
+      "reference_area_m2": 485700,
+      "caption_area_m2": 486000,
+      "rounded_area_matches": true,
+      "bbox_annotation_id": 27531,
+      "annotation_box": [
+        0,
+        0.37,
+        1,
+        1
+      ],
+      "reference_extent_outward_2dp": [
+        0.0,
+        0.37,
+        1.0,
+        1.0
+      ],
+      "extent_matches": true,
+      "class_percentage_inside_box": 53.53835978835979
+    },
+    {
+      "class_name": "Arable land",
+      "clc_code": 211,
+      "pixels": 3686,
+      "image_percentage": 25.59722222222222,
+      "reference_area_m2": 368600,
+      "caption_area_m2": 369000,
+      "rounded_area_matches": true,
+      "bbox_annotation_id": 27532,
+      "annotation_box": [
+        0,
+        0,
+        0.93,
+        0.45
+      ],
+      "reference_extent_outward_2dp": [
+        0.0,
+        0.0,
+        0.93,
+        0.45
+      ],
+      "extent_matches": true,
+      "class_percentage_inside_box": 61.16421080578787
+    }
+  ],
+  "checks": [
+    {
+      "id": 27522,
+      "annotation": "Arable land between 60 and 70 percent: no",
+      "reference_percentage": 25.59722222222222,
+      "matches": true
+    },
+    {
+      "id": 27525,
+      "annotation": "Inland water present: yes",
+      "reference_pixels": 4857,
+      "matches": true
+    },
+    {
+      "id": 27526,
+      "annotation": "Agro-forestry present: no",
+      "reference_pixels": 0,
+      "matches": true
+    }
+  ]
+}

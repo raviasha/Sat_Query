@@ -54,6 +54,8 @@ The independent spatial audit checked **14.4 million original reference pixels**
 
 ## Run with Colab and Google Drive
 
+For the current 5,000-image run, account shortcuts, reusable annotation steps and code backups, see [Code, Colab and Drive](docs/code-colab-drive.md). The text notebook now has configurable input/output paths and an optional fixed six-image audit. The older pipeline layouts below remain available.
+
 Run these notebooks in order. They embed a checksum-verified package wheel, so cloning inside Colab is unnecessary.
 
 1. [Download subset](notebooks/SatQuery_BigEarthNet_Drive_Download.ipynb) — [open in Colab](https://colab.research.google.com/github/raviasha/Sat_Query/blob/main/notebooks/SatQuery_BigEarthNet_Drive_Download.ipynb). CPU is sufficient; mount your own Google Drive when prompted.
@@ -82,7 +84,7 @@ The original download plus source cache used approximately **0.558 GB**. This ex
 
 Completed downloads and stages are checked and reused. Most core exporters require a **new output directory**; choose new experiment directories when changing data/configuration. Rerunning a completed notebook does not automatically retrain the model.
 
-**Portability boundary:** package APIs support other subset sizes, but current Colab scripts assert 1,000 areas and a 600/200/200 split and use fixed paths. Adapt the scripts or call package APIs for a different experiment. They are not a general workflow scheduler.
+**Portability boundary:** package APIs support other subset sizes. The older coverage stage scripts assert their experiment counts/splits; annotation download and matching accept paths from the notebook configuration and derive the image count from metadata. These notebooks are not a general workflow scheduler.
 
 ## Local installation
 
@@ -250,7 +252,7 @@ uv run --no-sync python scripts/build_download_notebook.py
 uv run --no-sync python scripts/build_annotation_notebook.py
 ```
 
-The annotation builder also rebuilds the main pipeline notebook. Builders embed the current package wheel and checksum, not imagery, trained weights or credentials. Colab uses its runtime/dependency installation rather than the local uv lock.
+The annotation builder also rebuilds the main pipeline notebook and includes the separate `audit_annotation_samples.py` diagnostic. Builders embed the current package wheel and checksum, not imagery, trained weights or credentials. Colab uses its runtime/dependency installation rather than the local uv lock.
 
 Git contains source, tests, notebooks, documentation, the lockfile and small reports. Datasets, prepared tensors, checkpoints, predictions, caches and virtual environments are excluded. **Cloning does not retrieve the recorded Drive artifacts or trained head.** Recreate them with the workflows or supply compatible artifacts.
 
@@ -268,3 +270,8 @@ Git contains source, tests, notebooks, documentation, the lockfile and small rep
 Sources: [BigEarthNet](https://bigearth.net/), [BigEarthNet.txt](https://txt.bigearth.net/), [official CROMA code](https://github.com/antofuller/CROMA) and [weights](https://huggingface.co/antofuller/CROMA). Downloads use pinned [unofficial native-array LMDB](https://huggingface.co/datasets/hackelle/BigEarthNetV2-LMDB) and [metadata/reference-map](https://huggingface.co/datasets/torchgeo/bigearthnet) mirrors. TIFFs are reconstructed from native arrays; headers need not match originals. All 14 band arrays were checked against originals for one demo area, not every mirrored record.
 
 Vendored CROMA retains its [MIT license](src/satquery/_vendor/CROMA_LICENSE) and [provenance](src/satquery/_vendor/provenance.json). Upstream data/model licenses apply separately. The project's original code does not yet have a specified repository license.
+
+## Nonlinear head comparison
+
+[Experiment guide](docs/nonlinear-comparison.md) · [Colab notebook](notebooks/SatQuery_Nonlinear_Comparison.ipynb). Reuses the existing CROMA features and coverage targets to compare linear and MLP heads across three seeds.
+For tracking model improvements with actual land-cover area weights, see the [reusable area-weighted MAE module](docs/area-weighted-mae.md).

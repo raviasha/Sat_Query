@@ -1,0 +1,534 @@
+{
+  "url": "https://datasets-server.huggingface.co/filter?dataset=BIFOLD-BigEarthNetv2-0%2FBigEarthNet.txt&config=default&split=all_data&where=%22patch_id%22%3D%27S2A_MSIL2A_20170613T101031_N9999_R022_T33UUP_61_39%27&length=30",
+  "response": {
+    "features": [
+      {
+        "feature_idx": 0,
+        "name": "ID",
+        "type": {
+          "dtype": "int64",
+          "_type": "Value"
+        }
+      },
+      {
+        "feature_idx": 1,
+        "name": "s1_name",
+        "type": {
+          "dtype": "string",
+          "_type": "Value"
+        }
+      },
+      {
+        "feature_idx": 2,
+        "name": "patch_id",
+        "type": {
+          "dtype": "string",
+          "_type": "Value"
+        }
+      },
+      {
+        "feature_idx": 3,
+        "name": "input",
+        "type": {
+          "dtype": "string",
+          "_type": "Value"
+        }
+      },
+      {
+        "feature_idx": 4,
+        "name": "output",
+        "type": {
+          "dtype": "string",
+          "_type": "Value"
+        }
+      },
+      {
+        "feature_idx": 5,
+        "name": "type",
+        "type": {
+          "dtype": "string",
+          "_type": "Value"
+        }
+      },
+      {
+        "feature_idx": 6,
+        "name": "category",
+        "type": {
+          "dtype": "string",
+          "_type": "Value"
+        }
+      },
+      {
+        "feature_idx": 7,
+        "name": "split",
+        "type": {
+          "dtype": "string",
+          "_type": "Value"
+        }
+      },
+      {
+        "feature_idx": 8,
+        "name": "latitude",
+        "type": {
+          "dtype": "float64",
+          "_type": "Value"
+        }
+      },
+      {
+        "feature_idx": 9,
+        "name": "longitude",
+        "type": {
+          "dtype": "float64",
+          "_type": "Value"
+        }
+      },
+      {
+        "feature_idx": 10,
+        "name": "country",
+        "type": {
+          "dtype": "string",
+          "_type": "Value"
+        }
+      },
+      {
+        "feature_idx": 11,
+        "name": "season",
+        "type": {
+          "dtype": "string",
+          "_type": "Value"
+        }
+      },
+      {
+        "feature_idx": 12,
+        "name": "climate_zone",
+        "type": {
+          "dtype": "string",
+          "_type": "Value"
+        }
+      }
+    ],
+    "rows": [
+      {
+        "row_idx": 1745752,
+        "row": {
+          "ID": 27519,
+          "s1_name": "S1A_IW_GRDH_1SDV_20170613T165043_33UUP_61_39",
+          "patch_id": "S2A_MSIL2A_20170613T101031_N9999_R022_T33UUP_61_39",
+          "input": "Would you identify any broad-leaved forest as lying right beside inland waters?",
+          "output": "yes",
+          "type": "binary",
+          "category": "adjacency",
+          "split": "test",
+          "latitude": 48.31398981125651,
+          "longitude": 13.297826045662056,
+          "country": "Austria",
+          "season": "Summer",
+          "climate_zone": "Temperate, no dry season, warm summer"
+        },
+        "truncated_cells": []
+      },
+      {
+        "row_idx": 1745765,
+        "row": {
+          "ID": 27520,
+          "s1_name": "S1A_IW_GRDH_1SDV_20170613T165043_33UUP_61_39",
+          "patch_id": "S2A_MSIL2A_20170613T101031_N9999_R022_T33UUP_61_39",
+          "input": "Is there direct adjacency between any broad-leaved forest and marine waters in the scene?",
+          "output": "no",
+          "type": "binary",
+          "category": "adjacency",
+          "split": "test",
+          "latitude": 48.31398981125651,
+          "longitude": 13.297826045662056,
+          "country": "Austria",
+          "season": "Summer",
+          "climate_zone": "Temperate, no dry season, warm summer"
+        },
+        "truncated_cells": []
+      },
+      {
+        "row_idx": 1745781,
+        "row": {
+          "ID": 27521,
+          "s1_name": "S1A_IW_GRDH_1SDV_20170613T165043_33UUP_61_39",
+          "patch_id": "S2A_MSIL2A_20170613T101031_N9999_R022_T33UUP_61_39",
+          "input": "Does the image contain classes other than inland waters?",
+          "output": "yes",
+          "type": "binary",
+          "category": "area",
+          "split": "test",
+          "latitude": 48.31398981125651,
+          "longitude": 13.297826045662056,
+          "country": "Austria",
+          "season": "Summer",
+          "climate_zone": "Temperate, no dry season, warm summer"
+        },
+        "truncated_cells": []
+      },
+      {
+        "row_idx": 1745828,
+        "row": {
+          "ID": 27522,
+          "s1_name": "S1A_IW_GRDH_1SDV_20170613T165043_33UUP_61_39",
+          "patch_id": "S2A_MSIL2A_20170613T101031_N9999_R022_T33UUP_61_39",
+          "input": "Would you say that arable lands take up between 60% and 70% of the image?",
+          "output": "no",
+          "type": "binary",
+          "category": "area",
+          "split": "test",
+          "latitude": 48.31398981125651,
+          "longitude": 13.297826045662056,
+          "country": "Austria",
+          "season": "Summer",
+          "climate_zone": "Temperate, no dry season, warm summer"
+        },
+        "truncated_cells": []
+      },
+      {
+        "row_idx": 1747323,
+        "row": {
+          "ID": 27523,
+          "s1_name": "S1A_IW_GRDH_1SDV_20170613T165043_33UUP_61_39",
+          "patch_id": "S2A_MSIL2A_20170613T101031_N9999_R022_T33UUP_61_39",
+          "input": "Does the image illustrate fewer than three connected regions of inland waters?",
+          "output": "yes",
+          "type": "binary",
+          "category": "count",
+          "split": "test",
+          "latitude": 48.31398981125651,
+          "longitude": 13.297826045662056,
+          "country": "Austria",
+          "season": "Summer",
+          "climate_zone": "Temperate, no dry season, warm summer"
+        },
+        "truncated_cells": []
+      },
+      {
+        "row_idx": 1747349,
+        "row": {
+          "ID": 27524,
+          "s1_name": "S1A_IW_GRDH_1SDV_20170613T165043_33UUP_61_39",
+          "patch_id": "S2A_MSIL2A_20170613T101031_N9999_R022_T33UUP_61_39",
+          "input": "Can multiple continuous areas of broad-leaved forests be detected in this image?",
+          "output": "no",
+          "type": "binary",
+          "category": "count",
+          "split": "test",
+          "latitude": 48.31398981125651,
+          "longitude": 13.297826045662056,
+          "country": "Austria",
+          "season": "Summer",
+          "climate_zone": "Temperate, no dry season, warm summer"
+        },
+        "truncated_cells": []
+      },
+      {
+        "row_idx": 1747350,
+        "row": {
+          "ID": 27525,
+          "s1_name": "S1A_IW_GRDH_1SDV_20170613T165043_33UUP_61_39",
+          "patch_id": "S2A_MSIL2A_20170613T101031_N9999_R022_T33UUP_61_39",
+          "input": "Do parts of the image correspond to inland waters?",
+          "output": "yes",
+          "type": "binary",
+          "category": "presence",
+          "split": "test",
+          "latitude": 48.31398981125651,
+          "longitude": 13.297826045662056,
+          "country": "Austria",
+          "season": "Summer",
+          "climate_zone": "Temperate, no dry season, warm summer"
+        },
+        "truncated_cells": []
+      },
+      {
+        "row_idx": 1748780,
+        "row": {
+          "ID": 27526,
+          "s1_name": "S1A_IW_GRDH_1SDV_20170613T165043_33UUP_61_39",
+          "patch_id": "S2A_MSIL2A_20170613T101031_N9999_R022_T33UUP_61_39",
+          "input": "Do parts of the image correspond to agro-forestry areas?",
+          "output": "no",
+          "type": "binary",
+          "category": "presence",
+          "split": "test",
+          "latitude": 48.31398981125651,
+          "longitude": 13.297826045662056,
+          "country": "Austria",
+          "season": "Summer",
+          "climate_zone": "Temperate, no dry season, warm summer"
+        },
+        "truncated_cells": []
+      },
+      {
+        "row_idx": 1748857,
+        "row": {
+          "ID": 27527,
+          "s1_name": "S1A_IW_GRDH_1SDV_20170613T165043_33UUP_61_39",
+          "patch_id": "S2A_MSIL2A_20170613T101031_N9999_R022_T33UUP_61_39",
+          "input": "Generate a bounding box for the land cover class instance found at <point>(0.35, 0.16)</point> in the satellite image.",
+          "output": "[0.0 0.0, 0.93 0.45]",
+          "type": "bounding box",
+          "category": "point",
+          "split": "test",
+          "latitude": 48.31398981125651,
+          "longitude": 13.297826045662056,
+          "country": "Austria",
+          "season": "Summer",
+          "climate_zone": "Temperate, no dry season, warm summer"
+        },
+        "truncated_cells": []
+      },
+      {
+        "row_idx": 1748858,
+        "row": {
+          "ID": 27528,
+          "s1_name": "S1A_IW_GRDH_1SDV_20170613T165043_33UUP_61_39",
+          "patch_id": "S2A_MSIL2A_20170613T101031_N9999_R022_T33UUP_61_39",
+          "input": "Create a bounding box enclosing the land cover class instance at <point>(0.48, 0.47)</point> in the satellite image.",
+          "output": "[0.0 0.0, 1.0 0.94]",
+          "type": "bounding box",
+          "category": "point",
+          "split": "test",
+          "latitude": 48.31398981125651,
+          "longitude": 13.297826045662056,
+          "country": "Austria",
+          "season": "Summer",
+          "climate_zone": "Temperate, no dry season, warm summer"
+        },
+        "truncated_cells": []
+      },
+      {
+        "row_idx": 1748859,
+        "row": {
+          "ID": 27529,
+          "s1_name": "S1A_IW_GRDH_1SDV_20170613T165043_33UUP_61_39",
+          "patch_id": "S2A_MSIL2A_20170613T101031_N9999_R022_T33UUP_61_39",
+          "input": "Provide a bounding box around the land cover class instance found at <point>(0.64, 0.79)</point> in the satellite image.",
+          "output": "[0.0 0.37, 1.0 1.0]",
+          "type": "bounding box",
+          "category": "point",
+          "split": "test",
+          "latitude": 48.31398981125651,
+          "longitude": 13.297826045662056,
+          "country": "Austria",
+          "season": "Summer",
+          "climate_zone": "Temperate, no dry season, warm summer"
+        },
+        "truncated_cells": []
+      },
+      {
+        "row_idx": 1748860,
+        "row": {
+          "ID": 27530,
+          "s1_name": "S1A_IW_GRDH_1SDV_20170613T165043_33UUP_61_39",
+          "patch_id": "S2A_MSIL2A_20170613T101031_N9999_R022_T33UUP_61_39",
+          "input": "Identify a continuous patch of <ref>broad-leaved forest</ref>.",
+          "output": "[0.0 0.0, 1.0 0.94]",
+          "type": "bounding box",
+          "category": "reference",
+          "split": "test",
+          "latitude": 48.31398981125651,
+          "longitude": 13.297826045662056,
+          "country": "Austria",
+          "season": "Summer",
+          "climate_zone": "Temperate, no dry season, warm summer"
+        },
+        "truncated_cells": []
+      },
+      {
+        "row_idx": 1748861,
+        "row": {
+          "ID": 27531,
+          "s1_name": "S1A_IW_GRDH_1SDV_20170613T165043_33UUP_61_39",
+          "patch_id": "S2A_MSIL2A_20170613T101031_N9999_R022_T33UUP_61_39",
+          "input": "Point out a patch of <ref>inland waters</ref> in the image.",
+          "output": "[0.0 0.37, 1.0 1.0]",
+          "type": "bounding box",
+          "category": "reference",
+          "split": "test",
+          "latitude": 48.31398981125651,
+          "longitude": 13.297826045662056,
+          "country": "Austria",
+          "season": "Summer",
+          "climate_zone": "Temperate, no dry season, warm summer"
+        },
+        "truncated_cells": []
+      },
+      {
+        "row_idx": 1748862,
+        "row": {
+          "ID": 27532,
+          "s1_name": "S1A_IW_GRDH_1SDV_20170613T165043_33UUP_61_39",
+          "patch_id": "S2A_MSIL2A_20170613T101031_N9999_R022_T33UUP_61_39",
+          "input": "Locate a patch of <ref>arable land</ref> present in the image.",
+          "output": "[0.0 0.0, 0.93 0.45]",
+          "type": "bounding box",
+          "category": "reference",
+          "split": "test",
+          "latitude": 48.31398981125651,
+          "longitude": 13.297826045662056,
+          "country": "Austria",
+          "season": "Summer",
+          "climate_zone": "Temperate, no dry season, warm summer"
+        },
+        "truncated_cells": []
+      },
+      {
+        "row_idx": 1748922,
+        "row": {
+          "ID": 27533,
+          "s1_name": "S1A_IW_GRDH_1SDV_20170613T165043_33UUP_61_39",
+          "patch_id": "S2A_MSIL2A_20170613T101031_N9999_R022_T33UUP_61_39",
+          "input": "Describe this satellite image, including the location, season, and observed land cover.",
+          "output": "This satellite image, captured during the summer season in Austria, showcases a diverse landscape within the \"temperate, no dry season, warm summer\" climate zone. The dominant feature is the broad-leaved forest, covering approximately 586,000 square meters, which borders both a substantial body of inland waters, spanning around 486,000 square meters, and arable land, covering about 369,000 square meters. The broad-leaved forest shares borders with both the inland waters and the arable land, indicating a complex interplay between these forest, water, and agricultural areas.",
+          "type": "captioning",
+          "category": "None",
+          "split": "test",
+          "latitude": 48.31398981125651,
+          "longitude": 13.297826045662056,
+          "country": "Austria",
+          "season": "Summer",
+          "climate_zone": "Temperate, no dry season, warm summer"
+        },
+        "truncated_cells": []
+      },
+      {
+        "row_idx": 1748950,
+        "row": {
+          "ID": 27534,
+          "s1_name": "S1A_IW_GRDH_1SDV_20170613T165043_33UUP_61_39",
+          "patch_id": "S2A_MSIL2A_20170613T101031_N9999_R022_T33UUP_61_39",
+          "input": "Select the classes in contact: a) Arable land and Natural grassland and sparsely vegetated areas, b) Inland waters and Pastures, c) Arable land and Broad-leaved forest, d) Agro-forestry areas and Permanent crops",
+          "output": "c",
+          "type": "mcq",
+          "category": "adjacency",
+          "split": "test",
+          "latitude": 48.31398981125651,
+          "longitude": 13.297826045662056,
+          "country": "Austria",
+          "season": "Summer",
+          "climate_zone": "Temperate, no dry season, warm summer"
+        },
+        "truncated_cells": []
+      },
+      {
+        "row_idx": 1749033,
+        "row": {
+          "ID": 27535,
+          "s1_name": "S1A_IW_GRDH_1SDV_20170613T165043_33UUP_61_39",
+          "patch_id": "S2A_MSIL2A_20170613T101031_N9999_R022_T33UUP_61_39",
+          "input": "How much area do broad-leaved forests occupy? a) 10 to 50%, b) 50 to 60%, c) 0 to 10%, d) 70 to 90%",
+          "output": "a",
+          "type": "mcq",
+          "category": "area",
+          "split": "test",
+          "latitude": 48.31398981125651,
+          "longitude": 13.297826045662056,
+          "country": "Austria",
+          "season": "Summer",
+          "climate_zone": "Temperate, no dry season, warm summer"
+        },
+        "truncated_cells": []
+      },
+      {
+        "row_idx": 1749124,
+        "row": {
+          "ID": 27536,
+          "s1_name": "S1A_IW_GRDH_1SDV_20170613T165043_33UUP_61_39",
+          "patch_id": "S2A_MSIL2A_20170613T101031_N9999_R022_T33UUP_61_39",
+          "input": "Which climate zone is captured in the satellite image? a) Cold, dry summer, warm summer, b) Cold, no dry season, warm summer, c) Temperate, no dry season, warm summer, d) Temperate, no dry season, hot summer",
+          "output": "c",
+          "type": "mcq",
+          "category": "climate zone",
+          "split": "test",
+          "latitude": 48.31398981125651,
+          "longitude": 13.297826045662056,
+          "country": "Austria",
+          "season": "Summer",
+          "climate_zone": "Temperate, no dry season, warm summer"
+        },
+        "truncated_cells": []
+      },
+      {
+        "row_idx": 1749125,
+        "row": {
+          "ID": 27537,
+          "s1_name": "S1A_IW_GRDH_1SDV_20170613T165043_33UUP_61_39",
+          "patch_id": "S2A_MSIL2A_20170613T101031_N9999_R022_T33UUP_61_39",
+          "input": "Identify the number of continuous areas of arable land: a) 0, b) 3, c) 2, d) 1",
+          "output": "d",
+          "type": "mcq",
+          "category": "count",
+          "split": "test",
+          "latitude": 48.31398981125651,
+          "longitude": 13.297826045662056,
+          "country": "Austria",
+          "season": "Summer",
+          "climate_zone": "Temperate, no dry season, warm summer"
+        },
+        "truncated_cells": []
+      },
+      {
+        "row_idx": 1749126,
+        "row": {
+          "ID": 27538,
+          "s1_name": "S1A_IW_GRDH_1SDV_20170613T165043_33UUP_61_39",
+          "patch_id": "S2A_MSIL2A_20170613T101031_N9999_R022_T33UUP_61_39",
+          "input": "Which country does the satellite image capture? a) Kosovo, b) Ireland, c) Switzerland, d) Austria",
+          "output": "d",
+          "type": "mcq",
+          "category": "country",
+          "split": "test",
+          "latitude": 48.31398981125651,
+          "longitude": 13.297826045662056,
+          "country": "Austria",
+          "season": "Summer",
+          "climate_zone": "Temperate, no dry season, warm summer"
+        },
+        "truncated_cells": []
+      },
+      {
+        "row_idx": 1749127,
+        "row": {
+          "ID": 27539,
+          "s1_name": "S1A_IW_GRDH_1SDV_20170613T165043_33UUP_61_39",
+          "patch_id": "S2A_MSIL2A_20170613T101031_N9999_R022_T33UUP_61_39",
+          "input": "Which of these classes is visible in the image? a) Land principally occupied by agriculture, with significant areas of natural vegetation, b) Arable land, c) Agro-forestry areas, d) Coniferous forest",
+          "output": "b",
+          "type": "mcq",
+          "category": "presence",
+          "split": "test",
+          "latitude": 48.31398981125651,
+          "longitude": 13.297826045662056,
+          "country": "Austria",
+          "season": "Summer",
+          "climate_zone": "Temperate, no dry season, warm summer"
+        },
+        "truncated_cells": []
+      },
+      {
+        "row_idx": 1749128,
+        "row": {
+          "ID": 27540,
+          "s1_name": "S1A_IW_GRDH_1SDV_20170613T165043_33UUP_61_39",
+          "patch_id": "S2A_MSIL2A_20170613T101031_N9999_R022_T33UUP_61_39",
+          "input": "In which of the following seasons was this satellite image captured? a) Winter, b) Spring, c) Summer, d) Autumn",
+          "output": "c",
+          "type": "mcq",
+          "category": "season",
+          "split": "test",
+          "latitude": 48.31398981125651,
+          "longitude": 13.297826045662056,
+          "country": "Austria",
+          "season": "Summer",
+          "climate_zone": "Temperate, no dry season, warm summer"
+        },
+        "truncated_cells": []
+      }
+    ],
+    "num_rows_total": 22,
+    "num_rows_per_page": 100,
+    "partial": false
+  }
+}

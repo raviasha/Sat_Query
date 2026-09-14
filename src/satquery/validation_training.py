@@ -8,10 +8,27 @@ import torch
 from .prediction import CoverageHead, coverage_loss
 
 
-def fit_with_validation(
+def fit_with_validation(train, validation, *, architecture="linear", **kwargs):
+    """Fit either head with the same split checks, optimizer, and epoch selection.
+
+    Isolate the RNG for the entire fit, including dropout on CPU or CUDA.
+    """
+    device = torch.device(kwargs.get("device", "cpu"))
+    devices = (
+        [device.index if device.index is not None else torch.cuda.current_device()]
+        if device.type == "cuda"
+        else []
+    )
+    with torch.random.fork_rng(devices=devices):
+        torch.manual_seed(kwargs.get("seed", 17))
+        return _fit_with_validation(train, validation, architecture=architecture, **kwargs)
+
+
+def _fit_with_validation(
     train,
     validation,
     *,
+    architecture="linear",
     max_epochs=60,
     patience=10,
     learning_rate=0.001,
@@ -44,14 +61,20 @@ def fit_with_validation(
     scale = train.x.std(0, correction=0)
     # Constant columns have zero training signal; avoid magnifying their weights.
     scale = torch.where(scale < 1e-5, torch.ones_like(scale), scale)
-    x = ((train.x - mean) / scale).to(device)
+    # Standardize bounded chunks, avoiding two full CPU-sized temporary matrices.
+    normalized = []
+    for data in (train, validation):
+        values = torch.empty(data.x.shape, dtype=torch.float32, device=device)
+        for start in range(0, len(data.x), 32768):
+            values[start : start + 32768] = (data.x[start : start + 32768] - mean) / scale
+        normalized.append(values)
+    x, vx = normalized
     y = train.y.to(device)
-    vx = ((validation.x - mean) / scale).to(device)
     vy = validation.y.to(device)
     # Fixed seed controls initialization and minibatch order.
     with torch.random.fork_rng(devices=[]):
         torch.manual_seed(seed)
-        model = CoverageHead().to(device)
+        model = CoverageHead(architecture=architecture).to(device)
     generator = torch.Generator().manual_seed(seed)
     optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate, weight_decay=0.01)
     history, best, best_epoch, best_state = [], float("inf"), 0, None
@@ -86,7 +109,7 @@ def fit_with_validation(
             break
     model.load_state_dict(best_state)
     model = model.cpu().eval()
-    # Fold train-only standardization into the linear head so existing inference consumes raw features.
+    # Fold train-only standardization into the first affine layer of either head.
     with torch.inference_mode():
         before = model.predict((validation.x[:256] - mean) / scale)
         model.linear.weight.div_(scale)
@@ -95,6 +118,7 @@ def fit_with_validation(
         discrepancy = float((before - after).abs().max())
         torch.testing.assert_close(before, after, atol=1e-4, rtol=1e-4)
     return model, {
+        "architecture": architecture,
         "selected_epoch": best_epoch,
         "best_validation_loss": best,
         "history": history,
@@ -107,7 +131,7 @@ def fit_with_validation(
         "batch_size": batch_size,
         "optimizer": "AdamW",
         "weight_decay": 0.01,
-        "feature_standardization": "train-only mean/std folded into saved linear head",
+        "feature_standardization": "train-only mean/std folded into first affine layer",
         "folded_normalization_max_abs_error": discrepancy,
         "croma_frozen": True,
     }

@@ -1,17 +1,39 @@
 """Small coverage head and checkpoint IO, independent of raster and CROMA code."""
 
 from pathlib import Path
+from typing import ClassVar
 
 import torch
 from torch import nn
 
 
 class CoverageHead(nn.Module):
-    """Frozen 768-value feature -> 19 logits; softmax gives predicted coverage."""
+    """Frozen 768-value feature -> 19 logits, with linear or MLP architecture."""
 
-    def __init__(self):
+    ARCHITECTURES: ClassVar[dict[str, str]] = {
+        "linear": "linear_768_19",
+        "mlp": "mlp_768_256_128_19",
+    }
+
+    def __init__(self, architecture="linear"):
         super().__init__()
-        self.linear = nn.Linear(768, 19)
+        if architecture not in self.ARCHITECTURES:
+            raise ValueError("Unsupported coverage architecture")
+        self.architecture = architecture
+        # Keeping the first affine layer named linear preserves legacy checkpoint keys.
+        self.linear = nn.Linear(768, 19 if architecture == "linear" else 256)
+        self.hidden = (
+            nn.Identity()
+            if architecture == "linear"
+            else nn.Sequential(
+                nn.GELU(),
+                nn.Dropout(0.1),
+                nn.Linear(256, 128),
+                nn.GELU(),
+                nn.Dropout(0.1),
+                nn.Linear(128, 19),
+            )
+        )
 
     def forward(self, features):
         if (
@@ -23,7 +45,7 @@ class CoverageHead(nn.Module):
             or not torch.isfinite(features).all()
         ):
             raise ValueError("Features must be nonempty finite float32 (...,768) tensors")
-        return self.linear(features)
+        return self.hidden(self.linear(features))
 
     @torch.inference_mode()
     def predict(self, features):
@@ -61,7 +83,7 @@ def save_head(path: Path, model: CoverageHead, metadata: dict):
         torch.save(
             {
                 "format_version": 1,
-                "architecture": "linear_768_19",
+                "architecture": model.ARCHITECTURES[model.architecture],
                 "state_dict": {k: v.detach().cpu() for k, v in model.state_dict().items()},
                 "metadata": metadata,
             },
@@ -74,12 +96,15 @@ def load_head(path: Path) -> tuple[CoverageHead, dict]:
     if (
         not isinstance(value, dict)
         or value.get("format_version") != 1
-        or value.get("architecture") != "linear_768_19"
+        or value.get("architecture") not in CoverageHead.ARCHITECTURES.values()
         or not isinstance(value.get("metadata"), dict)
     ):
-        raise ValueError("Expected a linear_768_19 checkpoint version 1")
+        raise ValueError("Expected a supported coverage checkpoint version 1")
     with torch.random.fork_rng(devices=[]):
-        model = CoverageHead()
+        architecture = next(
+            k for k, v in CoverageHead.ARCHITECTURES.items() if v == value["architecture"]
+        )
+        model = CoverageHead(architecture=architecture)
     model.load_state_dict(value["state_dict"], strict=True)
     if any(not torch.isfinite(p).all() for p in model.parameters()):
         raise ValueError("Checkpoint contains nonfinite weights")
