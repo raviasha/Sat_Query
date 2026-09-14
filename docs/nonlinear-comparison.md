@@ -33,3 +33,23 @@ Report mean and sample standard deviation across seeds for coverage MAE and domi
 ## Code preservation
 
 The Colab launcher saves a ZIP of the exact Git revision under `SatQuery/code/` on the EDU-backed Drive. This contains reusable modules, tests, documentation and the launch notebook. The revision is also recorded in the experiment configuration; Colab's local extraction of that ZIP is temporary.
+
+## Completed 5,000-area experiment — 14 September 2026
+
+All six fits completed on a Colab T4 using source revision `79dc1eebd5e53f3b11edcce75d677f7e548af48f`. Inputs were reused: 4,600 training areas (1,029,204 eligible cells), 200 validation areas (44,848 cells), and 200 test areas (44,723 cells). No imagery extraction, tensor preparation, CROMA inference or label aggregation was repeated.
+
+| Metric, mean ± sample SD over seeds 17, 29, 43 | Linear | MLP |
+| --- | ---: | ---: |
+| Validation soft-target cross entropy | 1.36337 ± 0.00377 | 1.26091 ± 0.01159 |
+| Test dominant-class accuracy | 56.84% ± 0.20 pp | 59.85% ± 0.49 pp |
+| Test coverage MAE | 5.710 ± 0.067 pp | 5.177 ± 0.099 pp |
+
+The MLP gained 3.00 percentage points of dominant-class accuracy and reduced mean coverage MAE by 0.533 pp (9.33% relative). Linear seed 17 exactly reproduced the earlier 5,000-area baseline metrics: 57.0685% accuracy and 5.63167 pp MAE.
+
+Validation selected **MLP seed 29, epoch 1**, stored at `mlp/seed-29/head.pt`; SHA-256 `7261904cf89430c2c8f3a60c7d1db61471381555af8158592614626cd9e4dda9`. This particular checkpoint achieved **59.7082%** test dominant accuracy and **5.23148 pp** coverage MAE. Seed 43 had better test metrics but was not selected because the decision was fixed using validation. Dominant accuracy excludes 173 tied ground-truth cells, leaving 44,550 cells; coverage MAE includes all 44,723 eligible test cells.
+
+Across seeds, per-class overall MAE decreased for 18 of 19 classes. Examples: broad-leaved forest 15.79→13.81 pp, coniferous forest 9.50→7.94 pp, arable land 14.84→12.97 pp. Agro-forestry increased slightly from 1.84→1.88 pp. Low overall errors for rare classes can be dominated by absence: coastal wetlands have no test presence, and several other classes occur in fewer than 20 test areas. Use the saved present-class errors, precision/recall/F1 and support alongside overall MAE.
+
+MLP validation selected epochs 1, 1 and 2; later epochs overfit. The next controlled experiment should focus on validation-only regularization/capacity tuning and better rare-class training coverage. A fresh geographic holdout is needed for a stronger final assessment after these repeated comparisons. The MLP is the recommended candidate for inference; this experiment preserves the original deployed baseline.
+
+Verification checked all 39 indexed artifact hashes, input manifest hashes, prediction dimensions and normalization, 200 distinct test area IDs per run, and the unchanged original baseline checksum. The code test suite passed **104 tests, with 5 optional integration tests skipped**. Full metrics, predictions and reliability files are under the EDU-backed `SatQuery/pipeline-5000/experiments/linear-vs-mlp-v1/`; `summary-for-review.json` adds a compact per-class comparison. Source snapshots, launch notebook and architecture documentation are also preserved in the EDU SatQuery folder.
