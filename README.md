@@ -268,3 +268,7 @@ Git contains source, tests, notebooks, documentation, the lockfile and small rep
 Sources: [BigEarthNet](https://bigearth.net/), [BigEarthNet.txt](https://txt.bigearth.net/), [official CROMA code](https://github.com/antofuller/CROMA) and [weights](https://huggingface.co/antofuller/CROMA). Downloads use pinned [unofficial native-array LMDB](https://huggingface.co/datasets/hackelle/BigEarthNetV2-LMDB) and [metadata/reference-map](https://huggingface.co/datasets/torchgeo/bigearthnet) mirrors. TIFFs are reconstructed from native arrays; headers need not match originals. All 14 band arrays were checked against originals for one demo area, not every mirrored record.
 
 Vendored CROMA retains its [MIT license](src/satquery/_vendor/CROMA_LICENSE) and [provenance](src/satquery/_vendor/provenance.json). Upstream data/model licenses apply separately. The project's original code does not yet have a specified repository license.
+
+## Nonlinear head comparison
+
+[Experiment guide](docs/nonlinear-comparison.md) · [Colab notebook](notebooks/SatQuery_Nonlinear_Comparison.ipynb). Reuses the existing CROMA features and coverage targets to compare linear and MLP heads across three seeds.
