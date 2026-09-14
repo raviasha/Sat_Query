@@ -16,7 +16,9 @@ controller, and a local FastAPI application with a browser interface. The GUI
 must allow uploads and questions, show actual evidence and an observable trace,
 and download JSON and visual evidence. No generated scripts are executed.
 
-Inputs use a ZIP containing request.json plus explicitly mapped TIFF bands.
+The internal input contract uses a ZIP containing request.json plus explicitly
+mapped TIFF bands. The GUI also accepts ordinary TIFF uploads with modality/date
+controls and assembles that contract, so users need not hand-write JSON.
 Each observation declares sensor, modality, acquisition date and band-to-file
 mapping (optionally a band index into a multi-band TIFF). One optical, one SAR,
 co-registered optical/SAR, or two dated observations of the same modality are

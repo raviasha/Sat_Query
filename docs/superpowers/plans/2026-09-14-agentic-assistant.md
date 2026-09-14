@@ -115,6 +115,13 @@ serialize heavy inference, validate configured model paths before use. Do not
 serve arbitrary filesystem paths. Keep CORS closed and protect local API against
 cross-origin use. Body/query limits, clean temporary files on errors.
 
+The primary GUI also accepts ordinary TIFF files with observation modality/date
+controls and builds the strict internal ZIP/manifest. Support separate band files
+with unambiguous band-name suffixes and one stacked TIFF in a user-acknowledged
+standard channel order; do not guess missing bands or SAR radiometry. A bounded
+/api/analyze-files endpoint can assemble this contract. Test both layouts and
+multipart aggregate/member limits. Keep ZIP upload as an advanced option.
+
 Responsive GUI shows input options, ZIP instructions/example schema, question
 examples, clear capability and demo-model status, progress/error states, source
 preview and clickable class grid/legend, area table, deterministic answer and LLM
