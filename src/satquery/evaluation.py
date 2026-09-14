@@ -20,12 +20,15 @@ class TokenSplit:
 def load_splits(features, targets, *, feature_key="joint_encodings", progress=None):
     """Read verified exports once; keep official area splits and eligible token identities."""
     pairs = TrainingPairs(features, targets, feature_key=feature_key)
+    # Count eligible rows first, then fill fixed tensors.  The previous list-then-cat
+    # implementation held both every small view and the final concatenated tensor,
+    # which could exceed Colab RAM on the 5,000-area export.
     parts = {
-        s: {"x": [], "y": [], "ids": [], "patches": []} for s in ("train", "validation", "test")
+        s: {"count": 0, "patches": [], "ids": []} for s in ("train", "validation", "test")
     }
     seen_sar = set()
     count = 0
-    for samples, x, y, mask in pairs.iter_batches():
+    for samples, _x, _y, mask in pairs.iter_batches():
         for i, sample in enumerate(samples):
             split = sample.get("split")
             if split not in parts:
@@ -35,20 +38,39 @@ def load_splits(features, targets, *, feature_key="joint_encodings", progress=No
             seen_sar.add(sample["s1_name"])
             part = parts[split]
             part["patches"].append(sample["patch_id"])
-            part["x"].append(x[i, mask[i]])
-            part["y"].append(y[i, mask[i]])
-            part["ids"].extend([sample["patch_id"]] * int(mask[i].sum()))
+            eligible = int(mask[i].sum())
+            part["count"] += eligible
+            part["ids"].extend([sample["patch_id"]] * eligible)
         count += len(samples)
         if progress:
-            progress(f"Loaded verified feature/target pairs for {count} areas")
+            progress(f"Counted verified feature/target pairs for {count} areas")
+
+    for part in parts.values():
+        part["x"] = torch.empty((part["count"], 768), dtype=torch.float32)
+        part["y"] = torch.empty((part["count"], 19), dtype=torch.float32)
+
+    offsets = {s: 0 for s in parts}
+    count = 0
+    for samples, x, y, mask in pairs.iter_batches():
+        for i, sample in enumerate(samples):
+            split = sample["split"]
+            n = int(mask[i].sum())
+            start = offsets[split]
+            parts[split]["x"][start : start + n] = x[i, mask[i]]
+            parts[split]["y"][start : start + n] = y[i, mask[i]]
+            offsets[split] += n
+        count += len(samples)
+        if progress:
+            progress(f"Filled verified feature/target pairs for {count} areas")
+
     result = {}
     for split, part in parts.items():
         if not part["ids"]:
             raise ValueError(f"No eligible tokens for {split}")
         result[split] = TokenSplit(
             split,
-            torch.cat(part["x"]),
-            torch.cat(part["y"]),
+            part["x"],
+            part["y"],
             np.asarray(part["ids"]),
             tuple(part["patches"]),
         )
