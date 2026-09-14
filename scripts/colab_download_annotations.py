@@ -1,12 +1,17 @@
 # Fetch the official text-only source; no satellite imagery is downloaded again.
 from pathlib import Path
+import json
 import pyarrow.parquet as pq
 from satquery.download_bigearthnet import download_file
-REVISION='72d865f2146f0a85b720f7f3ca1cdbaeafc3d316'
-SOURCE_SHA256='d3b97f999456016bb13c2a8e94b8f47825654f07a0394a6b266a38b750ca1554'
-SOURCE_URL=f'https://huggingface.co/datasets/BIFOLD-BigEarthNetv2-0/BigEarthNet.txt/resolve/{REVISION}/BigEarthNet.txt.parquet'
-TEXT_SOURCE=Path('/content/drive/MyDrive/SatQuery/annotation-source-cache')/REVISION/'BigEarthNet.txt.parquet'
-download_file(SOURCE_URL,466819745,SOURCE_SHA256,TEXT_SOURCE,progress=lambda s:print(s,flush=True))
+from satquery.match_annotations import SOURCE_REVISION, SOURCE_SHA256, SOURCE_URL, SOURCE_SIZE
+TEXT_SOURCE=Path(globals().get('TEXT_SOURCE',Path('/content/drive/MyDrive/SatQuery/annotation-source-cache')/SOURCE_REVISION/'BigEarthNet.txt.parquet'))
+download_file(SOURCE_URL,SOURCE_SIZE,SOURCE_SHA256,TEXT_SOURCE,progress=lambda s:print(s,flush=True))
 parquet=pq.ParquetFile(TEXT_SOURCE)
+assert parquet.metadata.num_rows==9553962
+assert {'ID','patch_id','s1_name','input','output','type','split'}.issubset(parquet.schema_arrow.names)
+receipt={'source_url':SOURCE_URL,'revision':SOURCE_REVISION,'sha256':SOURCE_SHA256,
+         'bytes':TEXT_SOURCE.stat().st_size,'records':parquet.metadata.num_rows,
+         'columns':parquet.schema_arrow.names,'path':str(TEXT_SOURCE)}
+(TEXT_SOURCE.parent/'download-verification.json').write_text(json.dumps(receipt,indent=2)+'\n')
 print('OFFICIAL TEXT SOURCE VERIFIED:',parquet.metadata.num_rows,'records',flush=True)
 print(parquet.schema_arrow,flush=True)

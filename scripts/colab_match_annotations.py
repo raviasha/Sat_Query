@@ -6,14 +6,15 @@ from satquery.match_annotations import match_annotations, SOURCE_REVISION, SOURC
 from satquery.preprocessing import sha256
 from satquery.prediction_data import checked_file
 
-P=Path('/content/drive/MyDrive/SatQuery/pipeline-1000')
-IMAGE_ROOT=P.parent/'bigearthnet-v2-1000'
-TEXT_SOURCE=P.parent/'annotation-source-cache'/SOURCE_REVISION/'BigEarthNet.txt.parquet'
-OUTPUT=P/'annotations'
+P=Path(globals().get('P','/content/drive/MyDrive/SatQuery/pipeline-1000'))
+IMAGE_ROOT=Path(globals().get('IMAGE_ROOT',P.parent/'bigearthnet-v2-1000'))
+TEXT_SOURCE=Path(globals().get('TEXT_SOURCE',P.parent/'annotation-source-cache'/SOURCE_REVISION/'BigEarthNet.txt.parquet'))
+OUTPUT=Path(globals().get('OUTPUT',P/'annotations'))
+assert sha256(TEXT_SOURCE)==SOURCE_SHA256, 'Text source checksum mismatch'
 download=json.loads((IMAGE_ROOT/'download.json').read_text())
 assert sha256(IMAGE_ROOT/'metadata.parquet')==download['metadata_sha256']
 metadata=pd.read_parquet(IMAGE_ROOT/'metadata.parquet')
-assert len(metadata)==1000
+assert len(metadata)>0
 if not OUTPUT.exists():
     match_annotations(IMAGE_ROOT/'metadata.parquet',TEXT_SOURCE,OUTPUT,
                       source_revision=SOURCE_REVISION,expected_source_sha256=SOURCE_SHA256,
@@ -40,7 +41,8 @@ for batch in fm['batches']:
         links.append({k:scene[k] for k in ['patch_id','s1_name','image_index','image_split','annotation_splits','annotation_count','use_partition']} |
                      {'feature_batch':batch['directory'],'index_in_feature_batch':offset,
                       'feature_file_sha256':batch['sha256']['features.pt'],'feature_manifest_sha256':previous['feature_manifest_sha256']})
-assert len(links)==1000
+assert len(links)==len(metadata)
+assert [link['image_index'] for link in links]==list(range(len(metadata)))
 linkfile=OUTPUT/'feature-links.jsonl'
 text=''.join(json.dumps(row)+'\n' for row in links)
 if linkfile.exists(): assert linkfile.read_text()==text
@@ -52,7 +54,8 @@ receipt={**report,'feature_manifest_sha256':previous['feature_manifest_sha256'],
          'output':str(OUTPUT)}
 (P/'stage-8-annotations-report.json').write_text(json.dumps(receipt,indent=2)+'\n')
 print('ANNOTATIONS MATCHED:',json.dumps(receipt),flush=True)
-example=next(s for s in scenes if s['annotations'])
-print('EXAMPLE:',json.dumps({'patch_id':example['patch_id'],'s1_name':example['s1_name'],
+example=next((s for s in scenes if s['annotations']),None)
+if example:
+    print('EXAMPLE:',json.dumps({'patch_id':example['patch_id'],'s1_name':example['s1_name'],
                            'image_split':example['image_split'],'annotation_count':example['annotation_count'],
                            'annotations':[{k:r[k] for k in ['ID','input','output','type','category','split']} for r in example['annotations'][:3]]}),flush=True)

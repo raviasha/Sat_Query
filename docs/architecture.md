@@ -213,6 +213,10 @@ The source scan is batched, but selected rows remain in memory. This is not cons
 
 [colab_download_annotations.py](../scripts/colab_download_annotations.py) downloads and verifies the pinned table. [colab_match_annotations.py](../scripts/colab_match_annotations.py) adds `feature-links.jsonl` by verifying image identities, feature batches, offsets and hashes, then writes the stage-8 receipt. **Feature linking is separate from the matcher CLI.**
 
+These scripts accept the notebook configuration (`P`, `IMAGE_ROOT`, `TEXT_SOURCE`, `OUTPUT`) and derive the selection size from metadata. Source downloads live under `annotations/source/<revision>`; new matched exports go under `annotations/matched`. The source download writes its own verification receipt. See [storage and reuse](code-colab-drive.md).
+
+[audit_annotation_samples.py](../scripts/audit_annotation_samples.py) ports the six-image Colab audit into a standalone diagnostic with explicit paths. It streams the pinned text source, checks image/SAR pairs, reads six reference rasters from the selected ZIP, computes class areas and connected-component box extents, and writes per-claim comparisons and a hash receipt. Its manually transcribed claims apply only to those six images. This does not implement a general grounding parser or model evaluation. The exact historical recipe is retained with the audit report.
+
 Not performed: box parsing, token overlap, region pooling, phrase resolution, image–text alignment, retrieval or language training.
 
 ## Orchestration and generated artifacts
@@ -232,7 +236,7 @@ Not performed: box parsing, token overlap, region pooling, phrase resolution, im
 | `build_pipeline_report.py` | Render historical Markdown from local saved reports |
 | `colab_update_evaluation.py` | Historical compressed runtime-update helper, not a normal pipeline stage |
 
-Stage scripts use fixed Colab paths/count assertions and should run in notebook order; some reuse in-memory state. For other datasets, adapt orchestration or use APIs. Generated notebooks contain package snapshots: changing source requires rebuilding them. They contain no runtime outputs or credentials.
+Coverage stage scripts use experiment-specific paths/count assertions and should run in notebook order; some reuse in-memory state. Annotation stages use the configuration cell; the six-image diagnostic uses explicit CLI arguments. For other coverage datasets, adapt orchestration or use APIs. Generated notebooks contain package snapshots: changing source requires rebuilding them. They contain no runtime outputs or credentials.
 
 ## Contracts, integrity and limitations
 
