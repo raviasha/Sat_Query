@@ -7,7 +7,6 @@ import math
 import os
 import re
 from copy import deepcopy
-from decimal import Decimal, InvalidOperation
 from typing import Any
 
 from ..prediction_data import class_schema
@@ -87,11 +86,22 @@ Only coverage, presence, describe, locate, and change are available. The measure
 ships, trees, or other objects. They do not support RGB, Cartosat, RISAT, benchmark scoring,
 weather, or object detection. Never write or execute code. Choose a function only when its
 documented measurement can answer the question. Use threshold 0.5 unless the user explicitly
-provides another fraction from 0 through 1."""
+provides another fraction from 0 through 1. If you include companion text with the function
+call, keep it general and include no numbers or numeric claims; all measurements are produced
+locally after routing."""
 
-_WORDING_INSTRUCTIONS = """Write at most 120 words using only the deterministic tool output.
-Do not add measurements, objects, confidence, causation, or certainty. Preserve the stated
-units, qualifiers, and limitations. If the tool abstained, explain the supported alternative."""
+_SECRET_KEY = re.compile(r"(?:api[_-]?key|authorization|password|secret|token)", re.IGNORECASE)
+_SECRET_VALUE = re.compile(r"(?i)(?:bearer\s+\S+|\b(?:sk|rk|pk)-[A-Za-z0-9_-]{4,}\b)")
+_ABSOLUTE_PATH = re.compile(
+    r"(?<![\w.])(?:/[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)+|[A-Za-z]:\\[^\s'\"]+)"
+)
+_NUMBER_WORD = re.compile(
+    r"\b(?:zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|"
+    r"thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|"
+    r"thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million|"
+    r"billion|half|quarter)\b",
+    re.IGNORECASE,
+)
 
 
 def _field(item: Any, name: str, default: Any = None) -> Any:
@@ -100,7 +110,14 @@ def _field(item: Any, name: str, default: Any = None) -> Any:
     return getattr(item, name, default)
 
 
-def _abstention(question: str, reason: str, *, provider: str, model: str | None) -> dict[str, Any]:
+def _abstention(
+    question: str,
+    reason: str,
+    *,
+    provider: str,
+    model: str | None,
+    function_calls: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
     answer = f"I cannot answer this request: {reason}"
     return {
         "provider": provider,
@@ -120,7 +137,7 @@ def _abstention(question: str, reason: str, *, provider: str, model: str | None)
             "provider": provider,
             "language_model": model,
             "parameters": {},
-            "function_calls": [],
+            "function_calls": function_calls or [],
         },
     }
 
@@ -165,20 +182,66 @@ def _compact_tool_output(result: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _numeric_values(value: Any) -> set[Decimal]:
-    tokens = re.findall(r"(?<![\w.])-?\d+(?:,\d{3})*(?:\.\d+)?", json.dumps(value))
-    values = set()
-    for token in tokens:
-        try:
-            values.add(Decimal(token.replace(",", "")))
-        except InvalidOperation:
-            continue
-    return values
+def _sanitize_string(value: str) -> str:
+    sanitized = _SECRET_VALUE.sub("[redacted]", value)
+    sanitized = _ABSOLUTE_PATH.sub("[path]", sanitized)
+    return sanitized[:256]
 
 
-def _wording_uses_only_computed_numbers(wording: str, compact: dict[str, Any]) -> bool:
-    allowed = _numeric_values(compact)
-    return _numeric_values(wording).issubset(allowed)
+def _sanitize_trace_value(value: Any, *, depth: int = 0) -> Any:
+    if depth >= 4:
+        return "[truncated]"
+    if isinstance(value, dict):
+        sanitized = {}
+        for key, item in list(value.items())[:12]:
+            safe_key = _sanitize_string(str(key))
+            sanitized[safe_key] = (
+                "[redacted]"
+                if _SECRET_KEY.search(safe_key)
+                else _sanitize_trace_value(item, depth=depth + 1)
+            )
+        return sanitized
+    if isinstance(value, list):
+        return [_sanitize_trace_value(item, depth=depth + 1) for item in value[:12]]
+    if isinstance(value, str):
+        return _sanitize_string(value)
+    if isinstance(value, float) and not math.isfinite(value):
+        return "[invalid number]"
+    if value is None or isinstance(value, (bool, int, float)):
+        return value
+    return _sanitize_string(str(value))
+
+
+def _decoded_arguments(raw_arguments: Any) -> Any:
+    try:
+        return json.loads(raw_arguments)
+    except (TypeError, json.JSONDecodeError):
+        return None
+
+
+def _call_record(call: Any) -> dict[str, Any]:
+    raw_arguments = _field(call, "arguments")
+    decoded = _decoded_arguments(raw_arguments)
+    arguments = (
+        _sanitize_trace_value(decoded)
+        if decoded is not None
+        else {"unparsed": _sanitize_string(raw_arguments if isinstance(raw_arguments, str) else "")}
+    )
+    raw_name = _field(call, "name")
+    raw_call_id = _field(call, "call_id")
+    return {
+        "name": _sanitize_string(raw_name if isinstance(raw_name, str) else "[invalid]"),
+        "call_id": _sanitize_string(raw_call_id if isinstance(raw_call_id, str) else ""),
+        "arguments": arguments,
+    }
+
+
+def _rejected_calls(calls: list[Any], reason: str) -> list[dict[str, Any]]:
+    return [{**_call_record(call), "accepted": False, "rejection_reason": reason} for call in calls]
+
+
+def _contains_numeric_claim(wording: str) -> bool:
+    return bool(re.search(r"\d", wording) or _NUMBER_WORD.search(wording))
 
 
 def _extract_class(question: str) -> str | None:
@@ -364,75 +427,62 @@ class AssistantController:
                 "OpenAI must select exactly one bounded measurement tool.",
                 provider="openai",
                 model=self.model,
+                function_calls=_rejected_calls(calls, "multiple function calls returned"),
             )
         call = calls[0]
         name = _field(call, "name")
         if name not in TASKS:
+            records = _rejected_calls([call], "unsupported tool")
             return _abstention(
                 question,
-                f"OpenAI selected unsupported tool {name!r}.",
+                f"OpenAI selected unsupported tool {records[0]['name']!r}.",
                 provider="openai",
                 model=self.model,
+                function_calls=records,
             )
         raw_arguments = _field(call, "arguments")
-        try:
-            decoded = json.loads(raw_arguments)
-        except (TypeError, json.JSONDecodeError):
-            decoded = None
+        decoded = _decoded_arguments(raw_arguments)
         arguments = _validate_arguments(name, decoded)
         if arguments is None:
+            records = _rejected_calls([call], "invalid function arguments")
             return _abstention(
                 question,
                 f"OpenAI returned invalid arguments for {name}.",
                 provider="openai",
                 model=self.model,
+                function_calls=records,
             )
-        result = self._execute(question, scenes, "openai", self.model, name, arguments)
-        compact = _compact_tool_output(result)
-        trace_call = {"name": name, "arguments": arguments, "output": compact}
-        result["trace"]["function_calls"] = [trace_call]
-        if result["abstained"]:
-            return result
-
         call_id = _field(call, "call_id")
         if not isinstance(call_id, str) or not call_id:
+            records = _rejected_calls([call], "missing function call identifier")
             return _abstention(
                 question,
                 "OpenAI returned a function call without a call identifier.",
                 provider="openai",
                 model=self.model,
+                function_calls=records,
             )
-        continuation = base_input + [
-            {
-                "type": "function_call",
-                "name": name,
-                "arguments": raw_arguments,
-                "call_id": call_id,
-            },
-            {
-                "type": "function_call_output",
-                "call_id": call_id,
-                "output": json.dumps(compact, allow_nan=False, separators=(",", ":")),
-            },
-        ]
-        try:
-            wording = client.responses.create(
-                model=self.model,
-                input=continuation,
-                instructions=_WORDING_INSTRUCTIONS,
-                store=False,
-                max_output_tokens=200,
-            )
-        except Exception as exc:  # noqa: BLE001 - provider errors must be sanitized
-            raise self._provider_failure(exc) from None
-        text = _field(wording, "output_text", "")
+        result = self._execute(question, scenes, "openai", self.model, name, arguments)
+        compact = _compact_tool_output(result)
+        trace_call = {
+            **_call_record(call),
+            "accepted": True,
+            "rejection_reason": None,
+            "output": compact,
+        }
+        result["trace"]["function_calls"] = [trace_call]
+        if result["abstained"]:
+            return result
+
+        text = _field(response, "output_text", "")
         if isinstance(text, str) and text.strip():
             candidate = text.strip()[:2000]
-            if _wording_uses_only_computed_numbers(candidate, compact):
+            if not _contains_numeric_claim(candidate):
                 result["llm_wording"] = candidate
             else:
                 result["limitations"].append(
-                    "Optional OpenAI wording was omitted because it introduced an ungrounded numeric value."
+                    "Optional OpenAI wording was omitted because it contained a numeric claim; "
+                    "all measurements remain in the deterministic answer and evidence."
                 )
         return result
 

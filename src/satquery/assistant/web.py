@@ -570,8 +570,21 @@ def create_app(
                 )
         except ProviderError as exc:
             raise HTTPException(status_code=502, detail=str(exc)) from None
-        except (CapabilityError, IndexError, ValueError) as exc:
-            raise HTTPException(status_code=422, detail=_safe_error(str(exc))) from None
+        except CapabilityError:
+            raise HTTPException(
+                status_code=422,
+                detail="Demo capability is unavailable or incompatible with configured models.",
+            ) from None
+        except IndexError:
+            raise HTTPException(
+                status_code=422,
+                detail="Demo sample index is outside the configured feature dataset.",
+            ) from None
+        except ValueError:
+            raise HTTPException(
+                status_code=422,
+                detail="Configured cached feature demo could not be read or validated.",
+            ) from None
 
     @app.get("/api/results/{result_id}/report.json")
     async def report_download(result_id: str):

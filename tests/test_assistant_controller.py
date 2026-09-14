@@ -56,6 +56,10 @@ def _tool_call(name, arguments, call_id="call-1"):
     )
 
 
+def _raw_tool_call(name, arguments, call_id="call-1"):
+    return SimpleNamespace(type="function_call", name=name, arguments=arguments, call_id=call_id)
+
+
 def test_local_mode_routes_supported_question_without_openai():
     from satquery.assistant.controller import AssistantController
 
@@ -136,21 +140,23 @@ def test_object_count_is_declined_before_any_openai_request():
     assert api.calls == []
 
 
-def test_openai_uses_strict_allowlisted_tool_then_returns_grounded_wording():
+def test_openai_uses_one_strict_allowlisted_call_and_keeps_nonnumeric_wording():
     from satquery.assistant.controller import AssistantController
 
-    routing = SimpleNamespace(output=[_tool_call("coverage", {"class_name": "forest"})])
-    wording = SimpleNamespace(output=[], output_text="The computed estimate shows forest coverage.")
-    client, api = _client(routing, wording)
+    routing = SimpleNamespace(
+        output=[_tool_call("coverage", {"class_name": "forest"})],
+        output_text="A deterministic forest coverage measurement follows.",
+    )
+    client, api = _client(routing)
     controller = AssistantController(openai_client=client)
     summary = {"kind": "single", "observations": [{"id": "scene-1"}]}
 
     result = controller.answer("How much forest is there?", [_scene()], summary, provider="openai")
 
     assert result["provider"] == "openai"
-    assert result["llm_wording"] == "The computed estimate shows forest coverage."
+    assert result["llm_wording"] == "A deterministic forest coverage measurement follows."
     assert result["deterministic_answer"].startswith("Estimated forest coverage")
-    assert len(api.calls) == 2
+    assert len(api.calls) == 1
     first = api.calls[0]
     assert first["model"] == "gpt-4.1-mini-2025-04-14"
     assert first["store"] is False
@@ -168,36 +174,51 @@ def test_openai_uses_strict_allowlisted_tool_then_returns_grounded_wording():
         set(tool["parameters"]["properties"]) == set(tool["parameters"]["required"])
         for tool in first["tools"]
     )
-    assert api.calls[1]["input"][-1]["type"] == "function_call_output"
-    assert api.calls[1]["input"][-1]["call_id"] == "call-1"
-    assert "fraction_grid" not in api.calls[1]["input"][-1]["output"]
     serialized_calls = json.dumps(api.calls)
     assert "normalized" not in serialized_calls
     assert "/tmp/" not in serialized_calls
     assert result["trace"]["function_calls"][0]["arguments"] == {"class_name": "forest"}
+    assert result["trace"]["function_calls"][0]["accepted"] is True
+    assert "output" in result["trace"]["function_calls"][0]
 
 
-def test_openai_wording_with_an_uncomputed_number_is_omitted():
+@pytest.mark.parametrize(
+    "wording",
+    [
+        "Forest has 0.3% coverage.",
+        "Class 8 is dominant.",
+    ],
+)
+def test_openai_wording_with_any_numeric_claim_is_omitted(wording):
     from satquery.assistant.controller import AssistantController
 
-    routing = SimpleNamespace(output=[_tool_call("coverage", {"class_name": "forest"})])
-    wording = SimpleNamespace(output=[], output_text="Forest has 99% confidence.")
-    client, _ = _client(routing, wording)
+    routing = SimpleNamespace(
+        output=[_tool_call("coverage", {"class_name": "forest"})], output_text=wording
+    )
+    client, api = _client(routing)
 
     result = AssistantController(openai_client=client).answer(
         "How much forest is there?", [_scene()], {"kind": "single"}, provider="openai"
     )
 
     assert result["llm_wording"] is None
-    assert any("ungrounded numeric" in item for item in result["limitations"])
+    assert any("numeric claim" in item for item in result["limitations"])
+    assert len(api.calls) == 1
 
 
 @pytest.mark.parametrize(
     ("call", "reason"),
     [
-        (_tool_call("python", {"code": "open('/tmp/x','w')"}), "unsupported tool"),
+        (
+            _tool_call(
+                "python",
+                {"code": "open('/tmp/internal/result','w')", "api_key": "sk-test-secret"},
+            ),
+            "unsupported tool",
+        ),
         (_tool_call("presence", {"class_name": "forest", "threshold": 2}), "invalid arguments"),
         (_tool_call("describe", {"extra": "field"}), "invalid arguments"),
+        (_raw_tool_call("coverage", "{not-json"), "invalid arguments"),
     ],
 )
 def test_openai_rejects_unknown_tools_and_invalid_arguments_without_executing(call, reason):
@@ -212,6 +233,14 @@ def test_openai_rejects_unknown_tools_and_invalid_arguments_without_executing(ca
     assert reason in result["answer"].lower()
     assert result["trace"]["selected_tool"] is None
     assert len(api.calls) == 1
+    assert len(result["trace"]["function_calls"]) == 1
+    attempted = result["trace"]["function_calls"][0]
+    assert attempted["accepted"] is False
+    assert attempted["rejection_reason"]
+    serialized_trace = json.dumps(attempted)
+    assert "/tmp/internal" not in serialized_trace
+    assert "sk-test-secret" not in serialized_trace
+    json.dumps(result, allow_nan=False)
 
 
 def test_openai_rejects_multiple_function_calls_as_unbounded():
@@ -232,6 +261,40 @@ def test_openai_rejects_multiple_function_calls_as_unbounded():
     assert result["abstained"] is True
     assert "exactly one" in result["answer"].lower()
     assert len(api.calls) == 1
+    assert [item["name"] for item in result["trace"]["function_calls"]] == [
+        "describe",
+        "coverage",
+    ]
+    assert all(
+        item["rejection_reason"] == "multiple function calls returned"
+        for item in result["trace"]["function_calls"]
+    )
+
+
+def test_openai_missing_call_id_preserves_rejected_attempt_without_running_wording_call():
+    from satquery.assistant.controller import AssistantController
+
+    routing = SimpleNamespace(
+        output=[_tool_call("coverage", {"class_name": "forest"}, call_id="")],
+        output_text="Coverage routed.",
+    )
+    client, api = _client(routing)
+
+    result = AssistantController(openai_client=client).answer(
+        "How much forest?", [_scene()], {"kind": "single"}, provider="openai"
+    )
+
+    assert result["abstained"] is True
+    assert len(api.calls) == 1
+    assert result["trace"]["function_calls"] == [
+        {
+            "name": "coverage",
+            "call_id": "",
+            "arguments": {"class_name": "forest"},
+            "accepted": False,
+            "rejection_reason": "missing function call identifier",
+        }
+    ]
 
 
 def test_openai_error_is_actionable_and_does_not_leak_credentials():

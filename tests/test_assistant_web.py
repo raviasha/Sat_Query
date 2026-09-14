@@ -243,6 +243,26 @@ def test_demo_uses_configured_cached_features_and_validates_index(tmp_path):
     )
 
 
+def test_demo_validation_error_never_exposes_configured_feature_paths(tmp_path):
+    class LeakyRuntime(_Runtime):
+        def analyze_cached(self, features, *, selected_index, capability):
+            raise ValueError("Input hash mismatch: /Users/private-owner/secret-demo/features.pt")
+
+    app, _, _, _ = _app(tmp_path, demo=True)
+    app.state.services.runtime = LeakyRuntime()
+
+    response = TestClient(app).post(
+        "/api/demo",
+        data={"question": "Describe", "provider": "local", "index": "0"},
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == (
+        "Configured cached feature demo could not be read or validated."
+    )
+    assert "/Users/" not in response.text and "features.pt" not in response.text
+
+
 def test_openai_provider_without_configuration_is_actionable(tmp_path):
     from satquery.assistant.controller import AssistantController
 

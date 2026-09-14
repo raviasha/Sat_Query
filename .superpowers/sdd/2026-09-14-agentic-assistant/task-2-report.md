@@ -34,17 +34,18 @@ or SAR radiometry.
   deterministic measurements for optional wording. Pixel arrays, previews, dense evidence
   grids, filesystem paths, and raw imagery do not leave the server.
 - Every function definition is a flat strict Responses tool with
-  `additionalProperties: false` and every declared property required. One routing call and
-  at most one wording call are allowed; both use `store=False`.
+  `additionalProperties: false` and every declared property required. An assistant request
+  makes at most one Responses call, used for routing, with `store=False`. Deterministic tool
+  execution then stays local; there is no wording follow-up call.
 - Function-call arguments and compact outputs remain in the returned observable trace.
   Unknown tools, malformed JSON, extra/missing parameters, invalid thresholds, absent call
   identifiers, and multiple tool calls abstain rather than execute.
 - Object-count questions are rejected before either provider is called because the coverage
   taxonomy cannot count buildings, roads, vehicles, ships, trees, or similar objects.
-- The deterministic measurement answer always remains separate and visible. Optional wording
-  is limited to 2,000 characters and is omitted if it introduces a numeric value absent from
-  the computed result. Provider failures become bounded actionable errors without including
-  the upstream exception or credential.
+- The deterministic measurement answer always remains separate and visible. Optional companion
+  text from the same routing response is limited to 2,000 characters and omitted if it contains
+  any numeric claim; all measurements stay in deterministic evidence. Provider failures become
+  bounded actionable errors without including the upstream exception or credential.
 
 ## Web application
 
@@ -182,6 +183,72 @@ messages.
 ## Remaining integration fact
 
 No live OpenAI call was made in this task because the current environment key returns HTTP 401.
-Fake-client tests cover both Responses calls and error sanitization. The app reports the
+Fake-client tests cover the single bounded Responses call and error sanitization. The app reports the
 authentication failure when OpenAI is explicitly selected and continues to offer the local
 provider; it never labels that path as OpenAI success.
+
+## Fix round 1
+
+Review found that successful OpenAI requests used one call for routing and a second for wording,
+that numeric matching allowed a value to be assigned a different unit, that rejected calls lost
+their observable trace, and that cached-demo errors could expose configured paths.
+
+Regression-first red evidence:
+
+```text
+/tmp/satquery-nonlinear-env/bin/python -m pytest -q tests/test_assistant_controller.py
+9 failed, 10 passed
+
+/tmp/satquery-nonlinear-env/bin/python -m pytest -q \
+  tests/test_assistant_web.py::test_demo_validation_error_never_exposes_configured_feature_paths
+1 failed
+```
+
+The controller now uses exactly one model call per OpenAI request. It executes the selected tool
+locally and never sends a function output back for a second model call. Optional text can only
+come from that same response and is discarded whenever it contains a digit or number word, so a
+fraction, class index, area, date, or other numeric value cannot be relabeled by generated prose.
+
+Every returned function-call attempt is recorded in bounded form. Argument strings, nested
+collections, keys, call IDs, and names have depth/count/length limits; credential-like values and
+absolute paths are redacted. Accepted calls include compact deterministic output. Unknown,
+malformed, invalid, multiple, and missing-call-ID attempts include an explicit rejection reason.
+No rejected call is executed.
+
+The demo route now maps capability, out-of-range index, and feature-validation failures to fixed
+public error categories. Upstream exception text is not returned, including errors that contain
+absolute configured feature paths.
+
+Green evidence:
+
+```text
+/tmp/satquery-nonlinear-env/bin/python -m pytest -q tests/test_assistant_controller.py
+19 passed
+
+/tmp/satquery-nonlinear-env/bin/python -m pytest -q \
+  tests/test_assistant_web.py::test_demo_validation_error_never_exposes_configured_feature_paths
+1 passed
+
+/tmp/satquery-nonlinear-env/bin/python -m pytest -q \
+  tests/test_assistant_controller.py tests/test_assistant_web.py
+31 passed
+
+/tmp/satquery-nonlinear-env/bin/python -m pytest -q
+178 passed, 5 skipped
+
+/tmp/satquery-nonlinear-env/bin/python -m ruff check \
+  src/satquery/assistant/controller.py src/satquery/assistant/web.py \
+  tests/test_assistant_controller.py tests/test_assistant_web.py
+All checks passed!
+
+/tmp/satquery-nonlinear-env/bin/python -m ruff format --check \
+  src/satquery/assistant/controller.py src/satquery/assistant/web.py \
+  tests/test_assistant_controller.py tests/test_assistant_web.py
+4 files already formatted
+
+node --check src/satquery/assistant/static/app.js
+passed
+
+git diff --check
+passed
+```
