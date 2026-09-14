@@ -114,7 +114,10 @@ Completed shards are checked and skipped on resume. Different selections require
 **Input:** extracted BigEarthNet-S2, BigEarthNet-S1 and Reference_Maps hierarchy plus selected metadata.
 **Output:** aligned tensors, reference map, identifiers and provenance. This stage runs no CROMA model.
 
-The current loader requires reference maps. A label-free inference loader is a future extension, even though downstream prediction itself needs only features.
+`preprocessing.py` remains the training-data loader and therefore requires reference maps. Live
+assistant inference uses the separate strict Sentinel TIFF loader in
+[`assistant/inputs.py`](../src/satquery/assistant/inputs.py). Additional sensor and benchmark
+profiles, including Cartosat-2S/RISAT and RGB inputs, remain unsupported.
 
 ### 3. Save prepared batches
 
