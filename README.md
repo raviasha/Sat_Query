@@ -272,3 +272,4 @@ Vendored CROMA retains its [MIT license](src/satquery/_vendor/CROMA_LICENSE) and
 ## Nonlinear head comparison
 
 [Experiment guide](docs/nonlinear-comparison.md) · [Colab notebook](notebooks/SatQuery_Nonlinear_Comparison.ipynb). Reuses the existing CROMA features and coverage targets to compare linear and MLP heads across three seeds.
+For tracking model improvements with actual land-cover area weights, see the [reusable area-weighted MAE module](docs/area-weighted-mae.md).

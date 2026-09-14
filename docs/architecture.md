@@ -306,3 +306,6 @@ Text annotations do not complete the temporal requirement. Cartosat-2S/RISAT and
 - Rebuild notebooks after source changes; run relevant tests, lint and package build.
 - Preserve upstream license/provenance when changing vendored code.
 - Update this guide when module ownership changes; describe proposed work as proposed until implemented and evaluated.
+# Reusable area-weighted coverage metric
+
+`area_weighted_mae.py` calculates ground-truth area-weighted MAE and scores saved model predictions or complete seeded experiments. `evaluation.py` calls the same function in new reports. See [definition and commands](area-weighted-mae.md). It reuses existing predictions and leaves feature extraction, label preparation, training and model selection unchanged.

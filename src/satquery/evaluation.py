@@ -5,6 +5,7 @@ from dataclasses import dataclass
 import numpy as np
 import torch
 
+from .area_weighted_mae import area_weighted_mae
 from .prediction_data import TrainingPairs, class_schema
 
 
@@ -173,6 +174,7 @@ def coverage_metrics(predictions, truth, area_ids, *, bootstrap_repeats=500, see
         "token_count": len(y),
         "evaluated_area_count": len(unique),
         "coverage_mae_pp": float(absolute.mean()),
+        "area_weighted_mae_pp": area_weighted_mae(p, y),
         "coverage_mae_pp_area_bootstrap_95ci": np.quantile(boot.mean(1), [0.025, 0.975]).tolist()
         if len(unique) > 1
         else None,
